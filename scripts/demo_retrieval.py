@@ -11,6 +11,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from faultline.util import setup_console
+
+setup_console()
+
 from faultline.config import ROSTER
 from faultline.instrumentation import Ledger
 from faultline.retrieval.models import RetrievalReport

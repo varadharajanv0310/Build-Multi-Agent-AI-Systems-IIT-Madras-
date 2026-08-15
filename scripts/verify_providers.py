@@ -12,6 +12,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from faultline.util import setup_console
+
+setup_console()
+
 from faultline.config import FAILOVER, ROSTER, SETTINGS, Role, lineages_in_play
 from faultline.providers.base import ProviderError
 from faultline.providers.ollama import OllamaProvider
