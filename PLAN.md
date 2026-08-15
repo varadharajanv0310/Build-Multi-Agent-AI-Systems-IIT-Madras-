@@ -57,6 +57,22 @@ This yields a metric nobody else will have: **inter-model agreement rate per jud
 
 ---
 
+## 3b. Platform technologies
+
+The event names CrewAI, LangGraph, AutoGen, Llama 4 and DeepSeek V4. Three are
+used, and none is a bolt-on:
+
+- **LangGraph** orchestrates the council. The pipeline is genuinely a state
+  graph, not a chain: the adjudicator can rule the corpus too thin and send
+  control *back* to retrieval with terminology discovered during calibration,
+  and "no commensurable conflict" is a legitimate terminal state. A linear
+  pipeline cannot express either edge.
+- **DeepSeek V4** (`deepseek-v4-flash`) argues one explanation stance.
+- **Llama 4** (`llama-4-maverick`) argues another.
+
+The two paid models cost roughly $0.01 per run at ~80K tokens, so the free-tier
+design is intact.
+
 ## 4. Agents
 
 | Agent | Job | Distinct because |
@@ -94,13 +110,13 @@ Three providers, **all free**. Every model below was empirically verified on 202
 | **Commensurability A** | 200–500 | `ollama/mistral:7b-instruct` | Mistral · local | Free, co-resides with qwen3:8b |
 | **Commensurability B** | 200–500 | `groq/llama-3.3-70b-versatile` | Meta · hosted | Opposed lineage is the entire point |
 | **Panel stance 1** | ~50 | `openrouter/nvidia/nemotron-3-nano-30b-a3b:free` | NVIDIA | Distinct priors |
-| **Panel stance 2** | ~50 | `openrouter/google/gemma-4-31b-it:free` | Gemma | Distinct priors |
-| **Panel stance 3** | ~50 | `groq/llama-3.3-70b-versatile` | Meta | Distinct priors |
+| **Panel stance 2** | ~50 | `openrouter/deepseek/deepseek-v4-flash` | DeepSeek V4 | Named platform tech; $0.064/M |
+| **Panel stance 3** | ~50 | `openrouter/meta-llama/llama-4-maverick` | Llama 4 | Named platform tech; $0.20/M |
 | **Field calibration** | 1 | `groq/openai/gpt-oss-120b` | OpenAI OSS · 120B | Runs once; errors propagate |
 | **Adjudication** | 30–60 | `groq/openai/gpt-oss-120b` | OpenAI OSS · 120B | Strongest verified free model |
 | Adjudication failover | — | `openrouter/nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA · 120B | Second 120B-class option |
 
-**Six lineages** — Qwen, Mistral, gpt-oss, Llama, Nemotron, Gemma. Diversity is architectural, not merely vendor-level: six different training corpora and post-training regimes, which is what the thesis requires.
+**Eight lineages** — Qwen, Mistral, gpt-oss, Llama 3, Llama 4, Nemotron, Gemma, DeepSeek V4. Diversity is architectural, not merely vendor-level: six different training corpora and post-training regimes, which is what the thesis requires.
 
 **Hardware:** RTX 5080, 16.3 GB VRAM (~14 GB free). `gpt-oss:20b` (13 GB) and `qwen3:8b` (5.2 GB) **cannot co-reside** — the pipeline must batch by stage (screen the whole corpus, unload, then extract) or Ollama thrashes on every alternation. `qwen3:8b` + `mistral:7b` (9.6 GB total) do co-reside, which is why they pair for local work.
 

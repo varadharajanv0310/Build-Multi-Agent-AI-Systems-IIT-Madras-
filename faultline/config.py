@@ -41,8 +41,10 @@ class Lineage(str, Enum):
     MISTRAL = "mistral"
     GPT_OSS = "gpt-oss"
     LLAMA = "llama"
+    LLAMA4 = "llama4"
     NEMOTRON = "nemotron"
     GEMMA = "gemma"
+    DEEPSEEK = "deepseek"
     GEMINI = "gemini"
 
 
@@ -97,11 +99,15 @@ ROSTER: dict[Role, ModelSpec] = {
     Role.PANEL_1: ModelSpec(
         "openrouter", "nvidia/nemotron-3-nano-30b-a3b:free", Lineage.NEMOTRON,
         native_schema=True, max_output_tokens=1024),
+    # DeepSeek V4 and Llama 4 are named platform technologies for this event.
+    # They are not free, but at $0.064 and $0.20 per million input tokens a
+    # full run costs about a cent — negligible against the free-tier design,
+    # and they add two more training lineages to the panel.
     Role.PANEL_2: ModelSpec(
-        "openrouter", "google/gemma-4-31b-it:free", Lineage.GEMMA,
+        "openrouter", "deepseek/deepseek-v4-flash", Lineage.DEEPSEEK,
         native_schema=True, max_output_tokens=1024),
     Role.PANEL_3: ModelSpec(
-        "groq", "llama-3.3-70b-versatile", Lineage.LLAMA,
+        "openrouter", "meta-llama/llama-4-maverick", Lineage.LLAMA4,
         native_schema=True, max_output_tokens=1024),
 
     # Runs once per review and configures everything downstream, so errors
@@ -137,11 +143,13 @@ FAILOVER: dict[Role, list[ModelSpec]] = {
         ModelSpec("groq", "llama-3.3-70b-versatile", Lineage.LLAMA,
                   native_schema=True, max_output_tokens=1024)],
     Role.PANEL_2: [
+        ModelSpec("openrouter", "google/gemma-4-31b-it:free",
+                  Lineage.GEMMA, native_schema=True, max_output_tokens=1024),
         ModelSpec("openrouter", "nvidia/nemotron-3-nano-30b-a3b:free",
                   Lineage.NEMOTRON, native_schema=True, max_output_tokens=1024)],
     Role.PANEL_3: [
-        ModelSpec("openrouter", "google/gemma-4-31b-it:free",
-                  Lineage.GEMMA, native_schema=True, max_output_tokens=1024)],
+        ModelSpec("groq", "llama-3.3-70b-versatile",
+                  Lineage.LLAMA, native_schema=True, max_output_tokens=1024)],
 }
 
 

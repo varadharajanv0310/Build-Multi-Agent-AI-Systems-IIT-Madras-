@@ -125,6 +125,31 @@ def missing_required(obj: dict[str, Any], schema: dict[str, Any]) -> list[str]:
     return [k for k in schema.get("required", []) if k not in obj]
 
 
+def confidence(value: Any, default: float = 0.5) -> float:
+    """Coerce a model's confidence onto 0..1.
+
+    Models answer "confidence" on whatever scale they feel like: 0.85, 85, or
+    9 out of 10 all show up, and observed panel output mixed all three in one
+    run. Left raw, a 85.0 would outrank every properly-scaled 0.9 and quietly
+    invert the ranking the adjudicator depends on.
+    """
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    if v != v or v in (float("inf"), float("-inf")):  # NaN / inf
+        return default
+    if v < 0:
+        return 0.0
+    if v <= 1.0:
+        return v
+    if v <= 10.0:      # "9 out of 10"
+        return v / 10.0
+    if v <= 100.0:     # "85 percent"
+        return v / 100.0
+    return 1.0
+
+
 class Provider(ABC):
     """One provider. Knows how to ask for a typed record and how to read the
     answer back; knows nothing about roles, budgets, or failover."""
