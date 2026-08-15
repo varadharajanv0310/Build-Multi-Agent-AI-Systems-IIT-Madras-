@@ -84,24 +84,35 @@ This yields a metric nobody else will have: **inter-model agreement rate per jud
 
 ## 5. Model roster
 
-Three genuinely different providers, **all free**. No Anthropic models in the shipped default path.
+Three providers, **all free**. Every model below was empirically verified on 2026-08-16 to emit a valid typed record for a real commensurability judgment — not merely to respond.
 
-| Stage | Calls/run | Model | Provider | Rationale |
+| Stage | Calls/run | Model | Lineage | Rationale |
 |---|---|---|---|---|
-| Field Calibration | 1 | Gemini (strongest free tier) | Google AI Studio | Runs once; errors propagate |
-| Query expansion | ~5 | Qwen3 14B (Q4) | Local / Ollama | Mechanical |
-| Relevance screening | 500–3000 | Qwen3 8B | Local / Ollama | Volume no hosted free tier can absorb |
-| Claim extraction | 50–200 | Qwen3 14B | Local / Ollama | Structured, cached per paper |
-| **Commensurability pair** | 200–500 | Local 14B **vs** Llama/Qwen on Groq | **Two providers** | Where shared priors do the most damage |
-| **Explanation panel** | 30–60 × N stances | Gemini / Groq / local, rotating | **Three providers** | Diverse priors are the entire point |
-| **Adjudication** | 30–60 | Gemini (strongest free tier) | Google AI Studio | Weighs arguments, holds veto |
-| Reviewer sim (paper mode) | 3 | Three different providers | All three | Distinct priors, not distinct prompts |
+| Relevance screening | 500–3000 | `ollama/qwen3:8b` | Qwen · local | Volume no hosted free tier can absorb |
+| Claim extraction | 50–200 | `ollama/gpt-oss:20b` | OpenAI OSS · local | Strongest local model; cached per paper |
+| Query expansion | ~5 | `ollama/qwen3:8b` | Qwen · local | Mechanical |
+| **Commensurability A** | 200–500 | `ollama/mistral:7b-instruct` | Mistral · local | Free, co-resides with qwen3:8b |
+| **Commensurability B** | 200–500 | `groq/llama-3.3-70b-versatile` | Meta · hosted | Opposed lineage is the entire point |
+| **Panel stance 1** | ~50 | `openrouter/nvidia/nemotron-3-nano-30b-a3b:free` | NVIDIA | Distinct priors |
+| **Panel stance 2** | ~50 | `openrouter/google/gemma-4-31b-it:free` | Gemma | Distinct priors |
+| **Panel stance 3** | ~50 | `groq/llama-3.3-70b-versatile` | Meta | Distinct priors |
+| **Field calibration** | 1 | `groq/openai/gpt-oss-120b` | OpenAI OSS · 120B | Runs once; errors propagate |
+| **Adjudication** | 30–60 | `groq/openai/gpt-oss-120b` | OpenAI OSS · 120B | Strongest verified free model |
+| Adjudication failover | — | `openrouter/nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA · 120B | Second 120B-class option |
 
-**Hardware:** RTX 5080 = 16GB VRAM. Comfortable at 8B–14B quantized (Q4/Q5); 24B Q4 fits tightly. Run via Ollama.
+**Six lineages** — Qwen, Mistral, gpt-oss, Llama, Nemotron, Gemma. Diversity is architectural, not merely vendor-level: six different training corpora and post-training regimes, which is what the thesis requires.
 
-Groq and Gemini are chosen for **architectural** diversity, not just vendor diversity — Groq serves open-weight models (Llama/Qwen family), Gemini is a different closed family, and Ollama runs a third. Three genuinely different training lineages, which is what the thesis requires.
+**Hardware:** RTX 5080, 16.3 GB VRAM (~14 GB free). `gpt-oss:20b` (13 GB) and `qwen3:8b` (5.2 GB) **cannot co-reside** — the pipeline must batch by stage (screen the whole corpus, unload, then extract) or Ollama thrashes on every alternation. `qwen3:8b` + `mistral:7b` (9.6 GB total) do co-reside, which is why they pair for local work.
 
-Verify current free-tier rate limits before building against them; they change.
+### Gemini is demoted to opportunistic
+
+Verification found `gemini-3.7-flash` returning `503 high demand` and `gemini-3.1-pro-preview` returning `429 quota exceeded` on a brand-new key. **The free tier cannot carry a critical-path role** — a rate limit during a judged demo is an avoidable way to lose the 20% working-demo criterion. Gemini stays wired in the provider registry as an opportunistic extra stance when it responds, and nothing depends on it.
+
+Rejected: `groq/qwen/qwen3.6-27b` (failed JSON schema validation, empty `failed_generation`; redundant with local Qwen anyway).
+
+### Known issue to handle in the provider layer
+
+`ollama/gpt-oss:20b` returned empty content — it routes output through a reasoning channel. Both it and `qwen3:8b` need thinking/content-channel handling in the Ollama adapter. Free-tier limits change; re-verify before the demo.
 
 **Provider abstraction is non-negotiable.** One `complete(messages, schema) -> structured` seam, from the first commit. Three reasons: the event's model policy is ambiguous about proprietary APIs, a heterogeneous council must swap providers per-role trivially, and free tiers rate-limit — the seam is where queuing, backoff, and failover live. If proprietary APIs turn out to be banned, the council goes all-local with zero architectural change.
 
