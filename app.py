@@ -99,8 +99,13 @@ def render_answer(res) -> None:
 
 
 def render_review(res) -> None:
-    if res.error and not res.review.claims:
+    # Always surface failures. Showing an empty result as though it succeeded
+    # is worse than showing the error that caused it.
+    if res.error:
         st.error(res.error)
+    if res.degraded:
+        st.warning(res.degraded)
+    if not res.review.claims:
         return
 
     rv = res.review
@@ -135,6 +140,11 @@ def render_review(res) -> None:
             st.markdown("**Must cite** — a referee would notice these missing")
             for m in pos["must_cite"]:
                 st.markdown(f"- {m}")
+
+    if not rv.objections:
+        st.warning("The reviewer panel produced no objections. That normally "
+                   "means every model was rate-limited rather than that your "
+                   "paper is unimpeachable — check the run log above.")
 
     if rv.objections:
         st.markdown("### Reviewer panel")

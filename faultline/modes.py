@@ -85,6 +85,7 @@ class ReviewResult:
     calibration: dict = field(default_factory=dict)
     ledger: Ledger | None = None
     error: str = ""
+    degraded: str = ""
 
 
 def review_paper(source: str, *, per_query: int = 8, from_year: int = 2000,
@@ -117,22 +118,34 @@ def review_paper(source: str, *, per_query: int = 8, from_year: int = 2000,
         log(f"Found {len(own)} claims in your paper")
 
         topic = (paper.title or "") + ". " + (own[0].get("text", "") if own else "")
-        literature, report, calibration = _gather(
-            router, store, run_id, topic, per_query=per_query,
-            from_year=from_year, max_papers=max_papers, log=log)
-        res.review.literature = literature
-        res.report = report
-        res.calibration = calibration
-
-        log("Appraising the evidence base…")
-        res.review.appraisal = appraise(router, res.review)
-
-        log("Positioning your contribution…")
-        res.review.positioning = position(router, res.review)
+        # Literature is valuable but not required. Three reviewers can critique
+        # a paper on its own merits, and losing the whole review because a free
+        # tier ran out is the worst possible failure mode.
+        try:
+            literature, report, calibration = _gather(
+                router, store, run_id, topic, per_query=per_query,
+                from_year=from_year, max_papers=max_papers, log=log)
+            res.review.literature = literature
+            res.report = report
+            res.calibration = calibration
+        except Exception as e:
+            log(f"Could not search the literature ({type(e).__name__}). "
+                f"Reviewing your paper on its own merits.")
+            res.degraded = (
+                "The literature search failed, so this review covers your paper "
+                "alone. Positioning and must-cite lists need the literature and "
+                "are therefore unavailable.")
 
         log("Convening the reviewer panel (3 lineages)…")
         res.review.objections = run_reviewer_panel(router, res.review)
         log(f"{len(res.review.objections)} objections raised")
+
+        log("Appraising the evidence base…")
+        res.review.appraisal = appraise(router, res.review)
+
+        if res.review.literature:
+            log("Positioning your contribution…")
+            res.review.positioning = position(router, res.review)
 
     except Exception as e:
         res.error = f"{type(e).__name__}: {e}"

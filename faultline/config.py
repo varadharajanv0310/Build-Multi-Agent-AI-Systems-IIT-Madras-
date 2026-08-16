@@ -122,6 +122,18 @@ ROSTER: dict[Role, ModelSpec] = {
         native_schema=True, max_output_tokens=2048),
 }
 
+# Local models, unmetered and always available. These terminate every failover
+# chain: hosted free tiers all exhaust on the same day, so a chain made only of
+# hosted models fails as a unit — which is exactly what happened when Groq and
+# OpenRouter rate-limited within seconds of each other and killed a whole review.
+# A degraded local answer beats no answer.
+_LOCAL_BIG = ModelSpec("ollama", "gpt-oss:20b", Lineage.GPT_OSS,
+                       native_schema=True, think="low",
+                       max_output_tokens=2048, metered=False)
+_LOCAL_MID = ModelSpec("ollama", "qwen3:8b", Lineage.QWEN,
+                       native_schema=True, think=False,
+                       max_output_tokens=1024, metered=False)
+
 # Tried in order when a role's primary model is rate-limited or erroring.
 # Deliberately crosses providers: a Groq outage must not stall the council.
 FAILOVER: dict[Role, list[ModelSpec]] = {
@@ -130,26 +142,32 @@ FAILOVER: dict[Role, list[ModelSpec]] = {
                   Lineage.NEMOTRON, native_schema=True, max_output_tokens=2048),
         ModelSpec("groq", "llama-3.3-70b-versatile", Lineage.LLAMA,
                   native_schema=True, max_output_tokens=2048),
+        _LOCAL_BIG,
     ],
     Role.CALIBRATION: [
         ModelSpec("openrouter", "nvidia/nemotron-3-super-120b-a12b:free",
                   Lineage.NEMOTRON, native_schema=True, max_output_tokens=4096),
+        _LOCAL_BIG,
     ],
     Role.COMMENSURABILITY_B: [
         ModelSpec("openrouter", "nvidia/nemotron-3-nano-30b-a3b:free",
                   Lineage.NEMOTRON, native_schema=True, max_output_tokens=512),
+        _LOCAL_MID,
     ],
     Role.PANEL_1: [
         ModelSpec("groq", "llama-3.3-70b-versatile", Lineage.LLAMA,
-                  native_schema=True, max_output_tokens=1024)],
+                  native_schema=True, max_output_tokens=1024),
+        _LOCAL_BIG],
     Role.PANEL_2: [
         ModelSpec("openrouter", "google/gemma-4-31b-it:free",
                   Lineage.GEMMA, native_schema=True, max_output_tokens=1024),
         ModelSpec("openrouter", "nvidia/nemotron-3-nano-30b-a3b:free",
-                  Lineage.NEMOTRON, native_schema=True, max_output_tokens=1024)],
+                  Lineage.NEMOTRON, native_schema=True, max_output_tokens=1024),
+        _LOCAL_BIG],
     Role.PANEL_3: [
         ModelSpec("groq", "llama-3.3-70b-versatile",
-                  Lineage.LLAMA, native_schema=True, max_output_tokens=1024)],
+                  Lineage.LLAMA, native_schema=True, max_output_tokens=1024),
+        _LOCAL_MID],
 }
 
 

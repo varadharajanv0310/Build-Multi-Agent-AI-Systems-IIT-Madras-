@@ -112,6 +112,7 @@ def extract_claims(
     papers: list[Paper],
     question: str,
     max_chars: int = 9000,
+    chunks_per_paper: int = 3,
 ) -> list[dict]:
     """Extract qualified claims from each paper relevant to the question."""
     items = []
@@ -119,23 +120,29 @@ def extract_claims(
         body = (p.fulltext or p.abstract or "").strip()
         if not body:
             continue
-        if len(body) > max_chars:
-            body = body[:max_chars] + " ...[truncated]"
-        prompt = (
+        # A full paper truncated to one window yields one or two claims from
+        # its introduction and misses every result. Chunk it instead.
+        windows = [body[i:i + max_chars]
+                   for i in range(0, min(len(body), max_chars * chunks_per_paper),
+                                  max_chars)] or [body]
+        for wi, body in enumerate(windows):
+            prompt = (
             f"RESEARCH QUESTION UNDER REVIEW\n{question}\n\n"
             f"PAPER\nTitle: {p.title}\nYear: {p.year or 'unknown'}\n"
             f"Design hint: {p.type or 'unknown'}\n\n{body}\n\n"
-            "Extract the findings from this paper that bear on the research "
-            "question, with their qualifiers."
-        )
-        items.append((p.id, [{"role": "system", "content": EXTRACTION_SYSTEM},
-                             {"role": "user", "content": prompt}]))
+                "Extract the findings from this paper that bear on the research "
+                "question, with their qualifiers."
+            )
+            items.append((f"{p.id}#{wi}",
+                          [{"role": "system", "content": EXTRACTION_SYSTEM},
+                           {"role": "user", "content": prompt}]))
 
     results = router.batch(Role.EXTRACTION, items, CLAIM_SCHEMA, stage="extraction")
 
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     rows: list[dict] = []
-    for paper_id, res in results.items():
+    for chunk_id, res in results.items():
+        paper_id = chunk_id.split("#")[0]
         for c in res.data.get("claims", []) or []:
             if not c.get("text"):
                 continue

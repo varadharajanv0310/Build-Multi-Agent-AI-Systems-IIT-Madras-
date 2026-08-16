@@ -107,7 +107,7 @@ def load_paper(source: str) -> Paper:
             text = _read_pdf(path)
         else:
             text = path.read_text(encoding="utf-8", errors="replace")
-        return Paper(id=f"local:{path.name}", title=path.stem,
+        return Paper(id=f"local:{path.name}", title=_guess_title(text) or path.stem,
                      abstract=text[:20000], fulltext=text,
                      fulltext_source="local_file", source="local")
 
@@ -139,6 +139,19 @@ def load_paper(source: str) -> Paper:
     raise ValueError(
         f"could not resolve {src!r} — pass a DOI, an arXiv id, a file path, "
         "or paste the abstract text")
+
+
+def _guess_title(text: str) -> str:
+    """First substantial line of a document is nearly always its title.
+
+    Showing a user 'faultline_upload' as the title of their own paper is a
+    small thing that makes the whole tool feel broken."""
+    for line in (text or "").splitlines():
+        line = " ".join(line.split())
+        if 15 < len(line) < 250 and not line.lower().startswith(
+                ("abstract", "http", "doi:", "arxiv:", "keywords")):
+            return line
+    return ""
 
 
 def _read_pdf(path: Path) -> str:
