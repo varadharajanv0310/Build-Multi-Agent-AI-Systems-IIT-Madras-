@@ -1,87 +1,122 @@
-# Submission
+# Submission — Research Agents Hack (IIT Madras)
 
-## Project summary (200 words)
+**Research Agents Hack: Build Multi-Agent AI Systems (IIT Madras)**, DoraHacks.
+Track: **Literature Review & Synthesis**. Submitted 17 August 2026.
 
-Ask any AI what the research says about a contested question and it returns a
-fluent, confident consensus. That consensus is often fictional. Real literature
-disagrees with itself — across populations, doses, and outcome measures — and
-summarisation destroys exactly that signal, averaging conflicting findings into
-a statement no individual study supports.
-
-Faultline inverts the objective. Given a research question in any field, it
-searches systematically, screens with a reported denominator, extracts findings
-*with* their qualifiers, and then finds where studies genuinely contradict each
-other.
-
-Eight model lineages take opposed roles. Two judge independently whether two
-findings are even comparable; a third breaks ties. Three argue competing
-explanations for a conflict, each required to cite concrete study attributes. An
-adjudicator rules — and can reject every explanation, which is how research gaps
-are identified.
-
-Evaluated against published systematic reviews rather than self-authored tests.
-On vitamin D and respiratory infection it independently reached the same
-moderator the review authors did. False-conflict rate 12.5%; retrieval recall
-11.9%, reported as the known weakness.
-
-Runs on local models plus free tiers at roughly one cent per run.
-
-*(198 words)*
+| | |
+|---|---|
+| Project | **Faultline** |
+| Live demo | https://faultline-6hlo.onrender.com/ |
+| Repository | https://github.com/varadharajanv0310/FAULTLINE |
+| Team | V Varadharajan · A Sowmiya Priya — SRM Ramapuram, Chennai |
 
 ---
 
-## Submission checklist
+## What the track asked for
 
-| Requirement | Status |
-|---|---|
-| Public repository | ✅ [GitHub](https://github.com/varadharajanv0310/Build-Multi-Agent-AI-Systems-IIT-Madras-) |
-| Setup instructions | ✅ [README](README.md#reproducibility) |
-| 200-word summary | ✅ above |
-| Reproducibility section | ✅ models, APIs, datasets, cost, limitations in README |
-| Architecture diagram | ✅ README |
-| Agent execution trace | ✅ persisted per run in SQLite `events` |
-| Evidence citations | ✅ every claim carries paper ID + locator |
-| Cost table | ✅ per-lineage in every run and in the report |
-| Failure-case demo | ✅ `scripts/test_veto.py` |
-| **3-minute demo video** | ❌ **not recorded** — script ready in [DEMO.md](DEMO.md) |
+> *Find relevant papers, compare evidence, summarize consensus, and surface
+> research gaps.*
 
-## Reproducibility
+Faultline does this as **two products on one engine**:
 
-**Models.** Local via Ollama: `qwen3:8b`, `gpt-oss:20b`, `mistral:7b-instruct`.
-Hosted free tier: `llama-3.3-70b-versatile`, `openai/gpt-oss-120b` (Groq);
-`nvidia/nemotron-3-nano-30b-a3b:free` (OpenRouter). Paid, negligible:
-`deepseek/deepseek-v4-flash`, `meta-llama/llama-4-maverick` (OpenRouter).
+- **Ask a question** → it searches, screens, extracts and answers, with the
+  conditions that change the answer and the corpus funnel behind it.
+- **Review my paper** → it extracts your claims, retrieves the surrounding
+  literature, and runs three opposed reviewers.
 
-**Platform technologies.** LangGraph, DeepSeek V4, Llama 4.
+Both share the same pipeline: field calibration → search strategy → concurrent
+multi-database retrieval → recall-biased screening → qualified claim extraction.
+What differs is what the council does with the findings at the end.
 
-**APIs.** OpenAlex (keyless, polite pool). Groq and OpenRouter free tiers.
+---
 
-**Datasets.** No fixed dataset. Corpora are retrieved live from OpenAlex
-(~250M works, all fields). Evaluation ground truth is discovered at run time
-from published reviews rather than hand-picked.
+## Named platform technologies used
 
-**Estimated run cost.** ~$0.01. Local inference is unmetered; free tiers carry
-the reasoning; DeepSeek V4 and Llama 4 are the only billed calls. Total spend
-across all development and evaluation is under $1.
+The event named CrewAI, LangGraph, AutoGen, Llama 4 and DeepSeek V4. Faultline
+uses three:
 
-**Hardware.** RTX 5080, ~14 GB VRAM. Note `gpt-oss:20b` (13 GB) and `qwen3:8b`
-(5.2 GB) cannot co-reside, so the pipeline batches by stage.
+- **LangGraph** — the state graph, including the backward edge that widens
+  retrieval when the corpus comes back thin.
+- **Llama 4** (`meta-llama/llama-4-maverick`) — reviewer R3, significance.
+- **DeepSeek V4** (`deepseek/deepseek-v4-flash`) — reviewer R2, method. This is
+  the reviewer that produced the sharpest objection in the demo run.
 
-**Known limitations.**
-- Abstract-only; full-text acquisition is not implemented.
-- Retrieval recall 11.9% — a lower bound, since review reference lists include
-  background citations, but genuinely low. Citation snowballing is the standard
-  fix and is not built.
-- Automatic ground-truth discovery depends on OpenAlex's `type:review`
-  classification, which suits fields with formal review culture. 2 of 5
-  benchmark cases correctly return *no* ground truth rather than a wrong match.
-- Commensurability judgement is the quality ceiling.
-- Free-tier rate limits are real; the demo replays a recorded run for that
-  reason.
+---
 
-## Safety and data
+## Evidence
 
-No confidential, personal, patient, unpublished or licence-restricted data is
-used. All inputs are open bibliographic metadata and abstracts from OpenAlex.
-Every claim in the output is attributed to a specific paper, and unverifiable
-claims are tagged rather than asserted.
+Every figure below comes from a committed run record, not an estimate.
+
+### Paper review — [`demo/seva.json`](demo/seva.json), run `d375b1cc3d94`
+
+Run against SEVA, a real unsubmitted paper on corpus-poisoning detection in RAG
+being prepared for IEEE TDSC — written by one of us, and never refereed.
+
+- 10,867 words → 9 empirical claims
+- Field identified unprompted: adversarial ML, poisoning detection for RAG
+- **6 major objections, 9 total**, across 3 model lineages
+- 113s · 34 model calls · 82% local · **$0.00**
+
+It raised a missing base rate behind the paper's headline statistic, a circular
+claim, and an argument that the paper's "LLM-free" framing is contestable given
+its dependence on pretrained embedding models. None were in the authors' own
+limitations section.
+
+### Question answering — [`demo/question.json`](demo/question.json), run `245d5d47c14b`
+
+- Direct answer with moderate confidence, qualified consensus
+- **5 conditions across 5 different axes** — population, dose, setting,
+  duration, measurement
+- 3 databases · 35 retrieved → 29 unique → screened
+- 44s · 20 model calls · 95% local · **$0.00**
+
+A deliberately different field from the paper run, to show the engine is not
+domain-specific.
+
+---
+
+## Design decisions worth reading
+
+**Opposed lineages, not opposed prompts.** An earlier version assigned each
+assessor a stance to argue and read the resulting disagreement as independent
+judgement. That is measurement error — it produced a meaningless 100%
+disagreement rate. Assessors now share one neutral prompt and differ only by
+lineage; disagreement fell to 17%.
+
+**The panel sees the paper.** An earlier version passed reviewers only the
+extracted claim list, and they confidently objected that a paper "does not
+report the sample size" when it did. Faulting an author for our own extraction
+gap is worse than raising nothing.
+
+**Four databases, merged.** Retrieval used to return OpenAlex's hits the moment
+they were non-empty, making the other three a failure path. A question that
+returned 0 usable papers from OpenAlex alone returns a real answer across all
+four. Whichever database answers first is not the same thing as the literature.
+
+**The public instance cannot be exhausted.** It replays recorded runs and
+returns 503 for live submission, because a public URL runs on our keys and a
+rate-limited key would break the demo for the people it was published for.
+
+---
+
+## Reproducing
+
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+python scripts/record_demo.py mine --paper path/to/paper.pdf
+```
+
+Full setup, including the local models, is in the [README](README.md).
+Deployment modes are in [docs/DEPLOY.md](docs/DEPLOY.md).
+
+---
+
+## Known limits
+
+- Retrieval recall is the weakest component; citation snowballing is not built.
+- Extraction is abstract-first; full-text acquisition is not implemented.
+- Hosted-only deployment degrades under free-tier rate limits, because screening
+  issues one model call per retrieved paper.

@@ -1,0 +1,47 @@
+# Keeps the public demo awake during judging.
+#
+# Render's free tier sleeps an instance after ~15 minutes idle and takes about
+# 50 seconds to cold-start. A judge opening the link and watching a blank tab
+# for a minute is an avoidable way to lose points, so this pings it well inside
+# that window.
+#
+# Runs on GitHub's hosted runners at no cost. Note that scheduled workflows can
+# be delayed when GitHub is busy, and GitHub disables schedules on repositories
+# with no activity for 60 days — both fine for a judging window, neither
+# suitable as real uptime monitoring.
+
+name: keep the demo awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"     # every 10 minutes
+  workflow_dispatch:            # and on demand, before a live demo
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake the instance
+        run: |
+          URL="https://faultline-6hlo.onrender.com/"
+          # --max-time covers a cold start; a sleeping instance can take ~50s.
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 120 --retry 2 --retry-delay 15 "$URL")
+          echo "GET / -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::demo returned $code"
+            exit 1
+          fi
+
+      - name: Check the recorded runs are still served
+        run: |
+          # The pages are useless to a judge without the demos behind them,
+          # so the ping verifies the payload rather than just a 200.
+          body=$(curl -sS --max-time 60 "https://faultline-6hlo.onrender.com/api/demo")
+          echo "$body"
+          echo "$body" | grep -q '"seva"' || { echo "::error::seva demo missing"; exit 1; }
+          echo "$body" | grep -q '"question"' || { echo "::error::question demo missing"; exit 1; }

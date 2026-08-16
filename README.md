@@ -1,186 +1,191 @@
 # Faultline
 
-**Finds where a body of research contradicts itself, explains why, and reports what would resolve it.**
+**Two jobs on one engine. Ask a question and get an answer from the literature.
+Or hand it your draft and face three independent reviewers before a real referee
+does.**
 
-Research Agents Hack (IIT Madras) · Track: Literature Review & Synthesis
+Built for **Research Agents Hack: Build Multi-Agent AI Systems (IIT Madras)** ·
+Track: **Literature Review & Synthesis**
+
+**[Live demo](https://faultline-6hlo.onrender.com/)** ·
+[Submission copy](docs/SUBMISSION_COPY.md) ·
+[Deployment](docs/DEPLOY.md)
 
 ---
 
 ## The problem
 
-Ask any LLM what the research says about a contested question and you get a fluent, confident consensus. That consensus is frequently fictional.
+Researchers cannot reliably review their own work. After months on a paper you
+stop seeing its weaknesses. A referee does not.
 
-Real literature is full of studies that disagree — different populations, doses, outcome measures, follow-up windows — and the disagreement is usually the most informative thing in the corpus. Summarisation destroys exactly that signal, averaging conflicting findings into a smooth statement no individual study supports.
+And a chat model asked about a literature returns a confident paragraph and a
+handful of papers, with no way to know what it missed, whether the citations are
+real, or where the evidence disagrees.
 
-For a researcher or clinician this is worse than no answer. **Manufactured agreement is the failure mode that matters**, and every existing "research assistant" has it by design.
+Both failures share a root: one model, one perspective, no denominator.
 
-Faultline inverts the objective. It never smooths. Conflict is preserved structurally, and the system's most important capability is saying *the evidence does not support a conclusion here*.
+---
 
-## Why this isn't a prompt
+## Job 01 — Answer a question from the literature
 
-| | Chat LLM | Faultline |
+Searches **OpenAlex, Crossref, Europe PMC and arXiv concurrently**, screens
+every result for relevance, extracts each study's findings with their
+qualifiers, and answers.
+
+The answer carries confidence and consensus **reported separately**, the
+conditions that change it — each tagged with the axis it moves on — where
+studies disagree, and the full retrieval funnel.
+
+<sub>Measured — *"Does creatine supplementation improve cognitive performance in
+healthy adults?"* · [`demo/question.json`](demo/question.json) ·
+run&nbsp;`245d5d47c14b`</sub>
+
+| | |
+|---|---|
+| Answer | Modest improvement, especially during sleep deprivation |
+| Confidence / consensus | Moderate / qualified |
+| Conditions surfaced | 5, across 5 axes |
+| Databases | Crossref, Europe PMC, OpenAlex |
+| 44s · 20 model calls · 95% local | **$0.00** |
+
+## Job 02 — Review your paper
+
+Extracts your claims, identifies the field, retrieves the surrounding
+literature, then runs **three reviewers on three model lineages** attacking
+framing, method and significance. Every objection ships with the minimum change
+that would neutralise it.
+
+<sub>Measured — SEVA, a real unsubmitted paper on corpus-poisoning detection in
+RAG being prepared for IEEE TDSC · [`demo/seva.json`](demo/seva.json) ·
+run&nbsp;`d375b1cc3d94`</sub>
+
+| | |
+|---|---|
+| Read | 10,867 words → 9 empirical claims |
+| Field identified | Adversarial ML — poisoning detection for RAG (unprompted) |
+| Objections | 6 major, 9 total, across 3 lineages |
+| 113s · 34 model calls · 82% local | **$0.00** |
+
+Three of what it raised:
+
+- The 0% poison-evasion claim reports a 95% Wilson upper bound **without a base
+  rate** — without which the bound does not mean what it appears to.
+- *"The gate prevents all the corruption it detects"* is **circular by
+  construction**.
+- The paper calls itself **"LLM-free"** while depending on pretrained embedding
+  models.
+
+None appeared in the authors' own limitations section.
+
+---
+
+## Why separate model families
+
+Three prompts against one model produce three flavours of the **same blind
+spot**. Separate training lineages genuinely disagree about what counts as a
+problem, which is what a real review panel does.
+
+Seven lineages run in opposed roles:
+
+| Role | Lineage | Where it runs |
 |---|---|---|
-| Retrieval | ~8 papers, no denominator | Systematic search with screened counts and a measured recall figure |
-| Perspective | One model, one opinion | 8 model lineages in adjudicated, opposed roles |
-| Ability to refuse | Trained toward helpful coherence | Adjudicator can veto every explanation — [verified](scripts/test_veto.py) |
-| Attribution | "studies suggest" | Paper ID + locator, structurally enforced |
-| Reproducibility | Different answer each time | Same corpus, same trace, persisted |
-| Error rate | None | Measured against published systematic reviews |
+| R1 framing | Nemotron | OpenRouter |
+| R2 method | DeepSeek V4 | OpenRouter |
+| R3 significance | Llama 4 | OpenRouter |
+| Adjudication, field calibration | gpt-oss | Groq |
+| Comparability — opposed pair | Mistral vs Llama 3 | Ollama / Groq |
+| Screening, extraction, query expansion | Qwen 3 | Ollama, local |
 
-**You cannot detect a contradiction between studies you never retrieved.** Missing half a literature doesn't produce a partial answer — it produces a confident false consensus. That makes systematic retrieval a precondition, not a feature.
+An earlier version gave each assessor a *stance to argue*, then read the
+resulting disagreement as independent judgement. That is measurement error, not
+evidence, and it produced a meaningless 100% disagreement rate. Assessors now
+get the same neutral prompt and differ only by lineage. Disagreement fell to
+**17%** — a number that means something.
 
-> An LLM gives you a **plausible** answer. This gives you a **defensible** one — with a denominator, a trace, and a measured error rate.
+---
 
-## Architecture
+## Honesty as a design constraint
 
-```
-                    ┌──────────────────┐
-                    │ Field Calibrator │  establishes the field's OWN
-                    └────────┬─────────┘  evidentiary norms
-                             ↓
-                    ┌──────────────────┐
-                    │ Question Framer  │  commensurability contract
-                    └────────┬─────────┘  + primary-study search strategy
-                             ↓
-                ┌────────────────────────┐
-         ┌─────→│  Retriever (OpenAlex)  │
-         │      └────────┬───────────────┘
-         │               ↓
-         │      ┌──────────────────┐
-         │      │    Screener      │  local, unmetered, recall-biased
-         │      └────────┬─────────┘
-         │               ↓
-         │      ┌──────────────────┐
-         │      │ Claim Extractor  │  findings WITH qualifiers
-         │      └────────┬─────────┘
-         │               ↓
-         │      ┌────────────────────────────────┐
-         │      │ Commensurability  A  ⟷  B      │  two lineages judge
-         │      │   split → third lineage rules  │  INDEPENDENTLY
-         │      └────────┬───────────────────────┘
-         │               ↓
-         │      ┌──────────────────┐
-         │      │ Conflict Detector│
-         │      └────────┬─────────┘
-         │               ↓
-         │        conflicts found?
-         │       ╱               ╲
-         └──── no                yes
-        widen                     ↓
-     (terminology         ┌──────────────────────────────┐
-      from calibration)   │ Explanation Panel            │
-                          │  population · dose ·         │  3 lineages,
-                          │  measurement                 │  3 different stances
-                          └────────┬─────────────────────┘
-                                   ↓
-                          ┌──────────────────┐
-                          │   Adjudicator    │  explained / unresolved /
-                          └────────┬─────────┘  not_a_conflict  ← the veto
-                                   ↓
-                          ┌──────────────────┐
-                          │  Gap Classifier  │  unresolved → testable gap
-                          └──────────────────┘
-```
+- **Every claim traces to a specific paper.** Findings display the source title.
+- **The denominator is shown, not hidden** — retrieved, unique, screened,
+  included, borderline, excluded.
+- **When the evidence does not settle a question, it says so** rather than
+  manufacturing confidence.
+- **Degradation is visible.** A rate-limited database surfaces as a banner while
+  the run continues.
+- **Recorded demo runs are labelled as replays on screen**, carrying their
+  original run id and date. A replay presented as live would be a lie.
 
-The backward edge is real, not decorative. When no conflict is found, the graph returns to retrieval and widens using terminology the Field Calibrator discovered — because **a narrow corpus that agrees with itself is indistinguishable from a literature that agrees**, and conflating those manufactures the false consensus this system exists to prevent. A linear pipeline cannot express that edge.
+---
 
-### Why multiple agents are forced, not decorative
+## Run it
 
-1. **Commensurability is contested.** Call everything comparable and you invent conflicts; call nothing comparable and you find none. A single pass is wrong constantly.
-2. **Explanation is a competition** between structurally different hypotheses, each required to cite concrete study attributes.
-3. **Retrieval recall loops backward** — discovering two studies use different terminology for one outcome is the signal to search again with terms you didn't know to use.
-4. **A single-model council reproduces the flaw it detects.** Two instances of one model share training data and blind spots. Model diversity is the same argument as reviewer diversity.
-
-## The council
-
-Eight training lineages. Everything scaling with **corpus size** runs locally and unmetered; hosted models only ever see calls scaling with **conflict count**, one to two orders of magnitude smaller. That asymmetry is what makes many full runs viable at near-zero cost.
-
-| Role | Model | Lineage | Where |
-|---|---|---|---|
-| Screening | `qwen3:8b` | Qwen | local |
-| Extraction | `gpt-oss:20b` | gpt-oss | local |
-| Commensurability A | `mistral:7b-instruct` | Mistral | local |
-| Commensurability B | `llama-3.3-70b-versatile` | Llama 3 | Groq |
-| Panel — population | `nemotron-3-nano-30b` | Nemotron | OpenRouter |
-| Panel — dose | `deepseek-v4-flash` | **DeepSeek V4** | OpenRouter |
-| Panel — measurement | `llama-4-maverick` | **Llama 4** | OpenRouter |
-| Calibration + Adjudication | `gpt-oss-120b` | gpt-oss | Groq |
-
-Failover chains cross providers, so no single outage stalls the council.
-
-**Platform technologies used:** LangGraph (orchestration), DeepSeek V4, Llama 4.
-
-## Results
-
-Measured against **published systematic reviews** — ground truth this team did not produce. See [`evaluation/results.json`](evaluation/results.json).
-
-| Metric | Result |
-|---|---|
-| **Moderator agreement with review authors** | **1/1 scorable cases** |
-| False-conflict rate | 12.5% |
-| Retrieval recall (lower bound) | 11.9% |
-| Cost per run | ~$0.01 |
-| Local share of inference | ~59% |
-
-**The headline result.** On vitamin D and respiratory infection, the published review concluded the disagreement came down to *"dosing regimen (daily/weekly vs bolus) and baseline status"*. Faultline independently reached `dose_exposure` — working only from primary studies, with no access to the review.
-
-**The veto works.** Verified directly in [`scripts/test_veto.py`](scripts/test_veto.py), because a corpus run cannot distinguish "the adjudicator can't refuse" from "these conflicts happen to be explicable". Three constructed cases — an explicable moderator, two trials matching on every stated dimension whose panel cites nothing, and two different endpoints — all return the correct verdict, including `unresolved`.
-
-### Honest limitations
-
-- **Retrieval recall is the weak number.** Partly definitional (review reference lists include background citations that were never candidate studies, so this is a lower bound), but mostly real. Tripling retrieval breadth raised it only 8.4% → 11.9%, which is sub-linear — the binding constraint is query diversity, not volume. Citation snowballing is the standard fix and is not implemented.
-- **Abstract-only.** Full-text acquisition is not built; all analysis runs on titles and abstracts.
-- **Ground-truth discovery is biomedicine-shaped.** OpenAlex's `type:review` classification suits fields with formal review culture. Economics and education publish surveys and working papers instead, so 2 of 5 benchmark cases correctly return *no* ground truth rather than a wrong match.
-- **Commensurability judgement is the quality ceiling.** Wrong in either direction and no downstream cleverness recovers.
-
-## Reproducibility
+Requires Python 3.13+ and [Ollama](https://ollama.com) for local inference.
 
 ```bash
-git clone https://github.com/varadharajanv0310/Build-Multi-Agent-AI-Systems-IIT-Madras-
-cd Build-Multi-Agent-AI-Systems-IIT-Madras-
 pip install -r requirements.txt
-cp .env.example .env      # add free Groq + OpenRouter keys, and your email
-ollama pull qwen3:8b && ollama pull gpt-oss:20b && ollama pull mistral:7b-instruct
 ```
 
 ```bash
-python scripts/verify_providers.py
+ollama pull qwen3:8b && ollama pull mistral:7b-instruct
+```
+
+Copy `.env.example` to `.env` and add free keys from
+[Groq](https://console.groq.com) and [OpenRouter](https://openrouter.ai):
+
+```bash
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
+POLITE_POOL_EMAIL=you@example.com
 ```
 
 ```bash
-python scripts/run_faultline.py "Does vitamin D supplementation prevent acute respiratory tract infections?"
+python -m uvicorn server:app --port 8000
 ```
 
-```bash
-python scripts/test_veto.py
+Then open `http://localhost:8000` — landing, `/ask`, `/review`.
+
+### Without a GPU
+
+`FAULTLINE_HOSTED_ONLY=1` remaps the local roles onto hosted models. It works,
+but screening issues one call per retrieved paper, so large runs meet free-tier
+limits. `FAULTLINE_PUBLIC_DEMO=1` serves the recorded runs only and needs no
+keys — that is what the live link runs. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+---
+
+## Layout
+
+```
+faultline/           the engine
+  agents/            framing, screening, extraction, review, answer
+  retrieval/         OpenAlex, Crossref, Europe PMC, arXiv
+  store/             SQLite trace, cache, claim record
+  graph.py           LangGraph state graph
+  payload.py         dataclasses -> the JSON the pages render
+server.py            FastAPI: jobs, replays, static pages
+web/                 landing, ask, review + the demo autopilot
+demo/                recorded runs, narration, cue sheet
+scripts/             record_demo, capture_demo, make_subtitles, build_static
+evaluation/          results measured against published reviews
 ```
 
-```bash
-python scripts/run_eval.py --limit 2
-```
+---
 
-**Requirements:** Python 3.11+, Ollama, ~14 GB VRAM (tested on RTX 5080), free API keys from Groq and OpenRouter. No paid Anthropic/OpenAI keys.
+## Known limits
 
-**Datasets:** OpenAlex (~250M works, keyless). Ground truth is discovered at run time from published reviews, not hand-picked.
+Stated because a tool that hides these is not one you should trust.
 
-**Cost:** ~$0.01 per run. Local models are unmetered; Groq and OpenRouter free tiers carry the rest; DeepSeek V4 and Llama 4 are the only paid calls.
+- **Retrieval recall is the weak point.** Citation snowballing is not
+  implemented, so the corpus is whatever four databases return for the
+  generated queries.
+- **Abstract-first.** Full-text acquisition is not built; extraction works from
+  abstracts and any full text supplied directly.
+- **Hosted-only deployment degrades** under free-tier rate limits. The design
+  pays off locally.
 
-> Note on the $0 claim: this is near-zero because volume runs on local hardware and reasoning runs on free tiers, **while still performing genuine multi-model LLM inference**. It is not $0 achieved by making the pipeline deterministic.
+---
 
-## Repository
+Built by **V Varadharajan** and **A Sowmiya Priya**, SRM Ramapuram, Chennai.
 
-| Path | Contents |
-|---|---|
-| `faultline/agents/` | Calibrator, Framer, Extractor, and the council |
-| `faultline/graph.py` | LangGraph orchestration, incl. the backward edge |
-| `faultline/router.py` | Role→model routing, budget, backoff, cross-lineage failover |
-| `faultline/eval/` | Ground-truth discovery and metrics |
-| `faultline/store/` | SQLite claim store — **the trace is the product** |
-| `scripts/` | Entry points and acceptance tests |
-| `PLAN.md` | Full design rationale |
-
-Every model call, cache hit, failover and verdict is persisted:
-
-```bash
-sqlite3 data/faultline.sqlite "SELECT stage, role, lineage, kind FROM events ORDER BY id DESC LIMIT 20"
-```
+*Ask the literature. Or let the literature review you.*
