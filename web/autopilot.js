@@ -27,10 +27,20 @@
   const page = location.pathname;
 
   const t0 = performance.now();
+  let anchor = t0;              // when this page's local timeline started
+
   // Schedule against the GLOBAL timeline; `abs` is seconds from narration t=0.
+  //
+  // The elapsed-time subtraction is the whole point. setTimeout counts from
+  // when it is CALLED, so cues registered later — the ones inside onResult,
+  // which only runs once a replay finishes — were firing a full 30s late and
+  // landing after the page had already navigated on. Subtracting the time
+  // already spent on this page makes a cue mean the same thing no matter when
+  // it is registered.
   const cue = (abs, fn) => {
-    const local = (abs - T) * 1000 / SPEED;
-    setTimeout(fn, Math.max(0, local + (page === "/" ? LEAD * 1000 : 0)));
+    const target = (abs - T) * 1000 / SPEED + (page === "/" ? LEAD * 1000 : 0);
+    const elapsed = performance.now() - anchor;
+    setTimeout(fn, Math.max(0, target - elapsed));
   };
 
   // --- operator HUD (never in frame: bottom-right, small) -------------------
@@ -65,77 +75,102 @@
   const go = (path, at) =>
     (location.href = `${path}?autopilot=1&t=${at}&speed=${SPEED}&lead=0`);
 
-  /* ---------------- ACT 1 + ACT 4 — the landing page ---------------- */
-  if (page === "/" || page.endsWith("landing.html")) {
-    if (T === 0) {
-      // Opening: hero, the two jobs, the lineages, the run.
-      cue(0.0, () => window.scrollTo(0, 0));
-      cue(3.5, () => glide(doc() * 0.15, 3000));   // "two jobs, one engine"
-      cue(8.0, () => glide(doc() * 0.38, 3000));   // seven lineages
-      cue(12.5, () => glide(doc() * 0.62, 2800));  // the run
-      cue(17.2, () => go("/review", 17.2));
-    } else {
-      // Closing act: the stack paragraph plays over the traceability band,
-      // then the closer carries the sign-off.
-      cue(132.5, () => window.scrollTo(0, doc() * 0.38));
-      cue(134.0, () => glide(doc() * 0.62, 3500));   // lineages / run
-      cue(144.3, () => glide(doc() * 0.86, 4000));   // traceability
-      cue(155.1, () => glide(doc(), 3500));          // "Put a claim under pressure"
-    }
-    return;
-  }
 
-  /* ---------------- ACT 2 / ACT 3 — a recorded run ---------------- */
-  const demo = params.get("demo") || (page === "/review" ? "seva" : "question");
-  // Replays are time-compressed to fit their segment; the REPLAY badge stays
-  // up throughout, so a compressed replay is never mistaken for a live run.
-  const compress = +params.get("compress") || (demo === "seva" ? 4.0 : 2.2);
-
-  cue(T + 0.6, () => {
-    fetch(`/api/demo/${demo}?speed=${compress * SPEED}`, { method: "POST" })
-      .then(r => r.json())
-      .then(j => { if (j.jobId && window.poller) poller.start(j.jobId); });
-  });
-
-  const onResult = (fn) => {
-    const iv = setInterval(() => {
-      const v = document.getElementById("viewResult");
-      if (v && !v.hidden && document.getElementById("resultBody").innerHTML) {
-        clearInterval(iv); fn();
+  function run() {
+    /* ---------------- ACT 1 + ACT 4 — the landing page ---------------- */
+    if (page === "/" || page.endsWith("landing.html")) {
+      if (T === 0) {
+        // Opening: hero, the two jobs, the lineages, the run.
+        cue(0.0, () => window.scrollTo(0, 0));
+        cue(3.5, () => glide(doc() * 0.15, 3000));   // "two jobs, one engine"
+        cue(8.0, () => glide(doc() * 0.38, 3000));   // seven lineages
+        cue(12.5, () => glide(doc() * 0.62, 2800));  // the run
+        cue(17.2, () => go("/review", 17.2));
+      } else {
+        // Closing act: the stack paragraph plays over the traceability band,
+        // then the closer carries the sign-off.
+        cue(132.5, () => window.scrollTo(0, doc() * 0.38));
+        cue(134.0, () => glide(doc() * 0.62, 3500));   // lineages / run
+        cue(144.3, () => glide(doc() * 0.86, 4000));   // traceability
+        cue(155.1, () => glide(doc(), 3500));          // "Put a claim under pressure"
       }
-    }, 120);
-    setTimeout(() => clearInterval(iv), 90000);
-  };
+      return;
+    }
 
-  if (demo === "seva") {
-    // Paper: land on the result ~47s, walk the panel while the objections
-    // are being read, hand off to the question at 75.1.
-    onResult(() => {
-      cue(47.4, () => glide(0, 400));                 // title + counts
-      cue(50.0, () => glide(doc() * 0.34, 3000));     // reviewer panel
-      cue(56.0, () => glide(doc() * 0.50, 3000));     // method objection
-      cue(64.0, () => glide(doc() * 0.66, 3200));     // significance objection
-      cue(70.0, () => glide(doc() * 0.82, 2800));     // appraisal
+    /* ---------------- ACT 2 / ACT 3 — a recorded run ---------------- */
+    const demo = params.get("demo") || (page === "/review" ? "seva" : "question");
+    // Replays are time-compressed to fit their segment; the REPLAY badge stays
+    // up throughout, so a compressed replay is never mistaken for a live run.
+    const compress = +params.get("compress") || (demo === "seva" ? 4.0 : 2.2);
+
+    cue(T + 0.6, () => {
+      fetch(`/api/demo/${demo}?speed=${compress * SPEED}`, { method: "POST" })
+        .then(r => r.json())
+        .then(j => { if (j.jobId && window.poller) poller.start(j.jobId); });
     });
-    cue(75.1, () => go("/ask", 75.1));
-  } else {
-    // Question: headline and readout, then the five conditions, then the
-    // evidence list and the corpus funnel under the "denominator" line.
-    onResult(() => {
-      cue(89.0, () => glide(0, 400));                 // headline + readout
-      cue(96.6, () => glide(doc() * 0.28, 3000));     // "It depends on"
-      cue(101.0, () => glide(doc() * 0.42, 3500));    // the five axes
-      cue(118.1, () => {
-        const btn = document.querySelector('[data-toggle="evidenceBody"]');
-        if (btn) btn.click();                          // evidence, with sources
-        setTimeout(() => glide(doc() * 0.62, 2600), 600 / SPEED);
+
+    const onResult = (fn) => {
+      const iv = setInterval(() => {
+        const v = document.getElementById("viewResult");
+        if (v && !v.hidden && document.getElementById("resultBody").innerHTML) {
+          clearInterval(iv); fn();
+        }
+      }, 120);
+      setTimeout(() => clearInterval(iv), 90000);
+    };
+
+    if (demo === "seva") {
+      // Paper: land on the result ~47s, walk the panel while the objections
+      // are being read, hand off to the question at 75.1.
+      onResult(() => {
+        cue(47.4, () => glide(0, 400));                 // title + counts
+        cue(50.0, () => glide(doc() * 0.34, 3000));     // reviewer panel
+        cue(56.0, () => glide(doc() * 0.50, 3000));     // method objection
+        cue(64.0, () => glide(doc() * 0.66, 3200));     // significance objection
+        cue(70.0, () => glide(doc() * 0.82, 2800));     // appraisal
       });
-      cue(125.0, () => {
-        const btn = document.querySelector('[data-toggle="corpusBody"]');
-        if (btn) btn.click();                          // the funnel
-        setTimeout(() => glide(doc() * 0.86, 2800), 600 / SPEED);
+      cue(75.1, () => go("/ask", 75.1));
+    } else {
+      // Question: headline and readout, then the five conditions, then the
+      // evidence list and the corpus funnel under the "denominator" line.
+      onResult(() => {
+        cue(89.0, () => glide(0, 400));                 // headline + readout
+        cue(96.6, () => glide(doc() * 0.28, 3000));     // "It depends on"
+        cue(101.0, () => glide(doc() * 0.42, 3500));    // the five axes
+        cue(118.1, () => {
+          const btn = document.querySelector('[data-toggle="evidenceBody"]');
+          if (btn) btn.click();                          // evidence, with sources
+          setTimeout(() => glide(doc() * 0.62, 2600), 600 / SPEED);
+        });
+        cue(125.0, () => {
+          const btn = document.querySelector('[data-toggle="corpusBody"]');
+          if (btn) btn.click();                          // the funnel
+          setTimeout(() => glide(doc() * 0.86, 2800), 600 / SPEED);
+        });
       });
-    });
-    cue(132.5, () => go("/", 132.5));
+      cue(132.5, () => go("/", 132.5));
+    }
   }
+
+  // `gate=1` holds the first page until the recorder fires /api/demo/gate, so
+  // t=0 is a moment we chose rather than one we estimated. Later pages in the
+  // chain carry their offset in `t` and start immediately.
+  function begin() {
+    if (!params.has("gate") || T > 0) { run(); return; }
+    hud.textContent = "ARMED — WAITING FOR RECORDER";
+    const poll = setInterval(() => {
+      fetch("/api/demo/gate").then(r => r.json()).then(g => {
+        if (g.firedAt) {
+          clearInterval(poll);
+          clearInterval(hudTimer);
+          hud.remove();
+          anchor = performance.now();   // t=0 is the moment the gate fired
+          run();
+        }
+      }).catch(() => {});
+    }, 150);
+  }
+
+  if (document.readyState === "complete") begin();
+  else window.addEventListener("load", begin);
 })();

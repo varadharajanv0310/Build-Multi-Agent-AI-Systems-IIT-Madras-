@@ -222,6 +222,29 @@ def _replay(job_id: str, record: dict, speed: float) -> None:
                 _jobs[job_id]["phase"] = "error"
 
 
+# Recording start gate. The page is loaded and idle before capture begins;
+# firing it from here means t=0 is a timestamp we chose, so the narration can
+# be aligned to the frame instead of guessed at.
+_gate = {"at": 0.0}
+
+
+@app.post("/api/demo/gate")
+def fire_gate():
+    _gate["at"] = time.time()
+    return {"firedAt": _gate["at"]}
+
+
+@app.get("/api/demo/gate")
+def read_gate():
+    return {"firedAt": _gate["at"]}
+
+
+@app.delete("/api/demo/gate")
+def clear_gate():
+    _gate["at"] = 0.0
+    return {"firedAt": 0.0}
+
+
 @app.get("/api/demo")
 def list_demos():
     if not DEMOS.is_dir():
