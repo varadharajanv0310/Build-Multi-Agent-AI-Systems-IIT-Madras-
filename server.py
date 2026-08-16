@@ -9,6 +9,7 @@ Nothing here contains analysis logic — it adapts faultline.modes to JSON.
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import traceback
@@ -96,8 +97,26 @@ def _run(job_id: str, fn, *args, **kwargs) -> None:
 
 # --- API ----------------------------------------------------------------------
 
+# A public URL runs on the deployer's API keys, so anyone who finds it can
+# spend their quota — and a rate-limited key breaks the demo for the judges it
+# was published for. PUBLIC_DEMO serves the recorded runs, which need no keys
+# and cannot be exhausted, and turns live submission off.
+PUBLIC_DEMO = os.getenv("FAULTLINE_PUBLIC_DEMO", "").strip() in ("1", "true", "yes")
+
+_PUBLIC_MSG = (
+    "This public instance serves recorded runs only. Live runs need API keys "
+    "and local models — clone the repo and run it yourself to do a real one."
+)
+
+
+def _reject_if_public() -> None:
+    if PUBLIC_DEMO:
+        raise HTTPException(503, _PUBLIC_MSG)
+
+
 @app.post("/api/review")
 def start_review(req: ReviewRequest):
+    _reject_if_public()
     if not req.source.strip():
         raise HTTPException(400, "no paper supplied")
     job_id = _new_job("review")
@@ -112,6 +131,7 @@ def start_review(req: ReviewRequest):
 
 @app.post("/api/review/upload")
 async def start_review_upload(file: UploadFile, papers: int = 25, year: int = 2005):
+    _reject_if_public()
     suffix = Path(file.filename or "paper.txt").suffix or ".txt"
     dest = UPLOADS / f"{uuid.uuid4().hex[:10]}{suffix}"
     dest.write_bytes(await file.read())
@@ -127,6 +147,7 @@ async def start_review_upload(file: UploadFile, papers: int = 25, year: int = 20
 
 @app.post("/api/ask")
 def start_ask(req: AskRequest):
+    _reject_if_public()
     if not req.question.strip():
         raise HTTPException(400, "no question supplied")
     job_id = _new_job("answer", req.question.strip())
@@ -288,6 +309,7 @@ def status():
         # The landing page builds its lineage chips from this, so what the page
         # advertises cannot drift from what the engine is configured to run.
         "lineageByRole": {r.value: s.lineage.value for r, s in ROSTER.items()},
+        "publicDemo": PUBLIC_DEMO,
     }
 
 

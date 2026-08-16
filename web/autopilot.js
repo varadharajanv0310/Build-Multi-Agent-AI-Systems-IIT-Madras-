@@ -77,6 +77,39 @@
 
 
   function run() {
+    /* ---------------- still mode — one page, one state ----------------
+     * For documentation screenshots. `still=1` skips the timeline entirely:
+     * it replays a recorded run at maximum speed, holds on the result, and
+     * optionally scrolls to a fraction of the page. No navigation, no cues.
+     *   /review?autopilot=1&still=1&demo=seva&scroll=0.3
+     */
+    if (params.has("still")) {
+      const scroll = parseFloat(params.get("scroll") || "0");
+      const d = params.get("demo");
+      const settle = () => setTimeout(() => {
+        if (scroll > 0) window.scrollTo(0, doc() * scroll);
+      }, 900);
+      if (!d) return settle();
+      fetch(`/api/demo/${d}?speed=20`, { method: "POST" })
+        .then(r => r.json())
+        .then(j => {
+          if (j.jobId && window.poller) poller.start(j.jobId);
+          const iv = setInterval(() => {
+            const v = document.getElementById("viewResult");
+            if (v && !v.hidden && document.getElementById("resultBody").innerHTML) {
+              clearInterval(iv);
+              // Open the disclosures so a screenshot shows the detail, not
+              // two collapsed rows.
+              if (params.has("open")) {
+                for (const b of document.querySelectorAll("[data-toggle]")) b.click();
+              }
+              settle();
+            }
+          }, 120);
+        });
+      return;
+    }
+
     /* ---------------- ACT 1 + ACT 4 — the landing page ---------------- */
     if (page === "/" || page.endsWith("landing.html")) {
       if (T === 0) {

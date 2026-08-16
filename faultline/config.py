@@ -180,6 +180,43 @@ FAILOVER: dict[Role, list[ModelSpec]] = {
 }
 
 
+# --- hosted-only mode --------------------------------------------------------
+#
+# There is no Ollama on a free web host, and four roles plus every fallback run
+# on it. FAULTLINE_HOSTED_ONLY=1 swaps those for hosted equivalents so the app
+# can run somewhere with no GPU.
+#
+# This is a real downgrade and worth stating plainly: screening issues one call
+# per retrieved paper, which is exactly the volume local inference exists to
+# absorb. On hosted free tiers a large run will meet a rate limit. Keep runs
+# small, or run locally where the design actually pays off.
+
+_HOSTED_SMALL = ModelSpec("groq", "llama-3.1-8b-instant", Lineage.LLAMA,
+                          native_schema=True, max_output_tokens=512)
+_HOSTED_MID = ModelSpec("openrouter", "nvidia/nemotron-3-nano-30b-a3b:free",
+                        Lineage.NEMOTRON, native_schema=True, max_output_tokens=1500)
+_HOSTED_BIG = ModelSpec("groq", "openai/gpt-oss-120b", Lineage.GPT_OSS,
+                        native_schema=True, max_output_tokens=2048)
+
+
+def _apply_hosted_only() -> None:
+    """Remap every Ollama slot onto hosted models, in place."""
+    ROSTER[Role.SCREENING] = _HOSTED_SMALL
+    ROSTER[Role.QUERY_EXPANSION] = _HOSTED_SMALL
+    ROSTER[Role.EXTRACTION] = _HOSTED_MID
+    # Keeps the opposed pair genuinely opposed: nemotron against llama, rather
+    # than collapsing both sides onto one provider's model.
+    ROSTER[Role.COMMENSURABILITY_A] = ModelSpec(
+        "openrouter", "google/gemma-4-31b-it:free", Lineage.GEMMA,
+        native_schema=True, max_output_tokens=512)
+    for role, chain in FAILOVER.items():
+        FAILOVER[role] = [m for m in chain if m.provider != "ollama"] + [_HOSTED_BIG]
+
+
+if os.getenv("FAULTLINE_HOSTED_ONLY", "").strip() in ("1", "true", "yes"):
+    _apply_hosted_only()
+
+
 @dataclass
 class Settings:
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
