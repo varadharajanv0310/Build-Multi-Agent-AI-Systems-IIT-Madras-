@@ -43,6 +43,7 @@ Every number below is measured from a real run, not estimated. Sources:
 > The runs shown are recorded and replayed, labelled on screen with their run
 > id — the pipeline is real, the clock is compressed to fit the format.
 >
+> Live demo: https://faultline-6hlo.onrender.com/
 > Code: https://github.com/varadharajanv0310/FAULTLINE
 > Built by V Varadharajan and A Sowmiya Priya, SRM.
 > Research Agents Hack — Literature Review & Synthesis track.
