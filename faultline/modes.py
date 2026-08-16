@@ -109,6 +109,7 @@ def review_paper(source: str, *, per_query: int = 8, from_year: int = 2000,
                     deadline=time.monotonic() + budget_seconds)
     res = ReviewResult(run_id=run_id, paper=paper, ledger=ledger)
     res.review.paper_title = paper.title or "your paper"
+    res.review.paper_text = paper.fulltext or paper.abstract or ""
 
     try:
         log("Reading your claims…")

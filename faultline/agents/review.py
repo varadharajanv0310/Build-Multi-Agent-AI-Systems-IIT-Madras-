@@ -64,6 +64,14 @@ Each objection is a complete sentence naming what you are attacking - quote or \
 reference the specific claim. Do not emit field labels, headings, or fragments \
 as the objection text.
 
+Attack only what the paper actually does. Before objecting that something is \
+missing, check the paper text above for it - faulting an author for a detail \
+they reported makes the whole review untrustworthy. You are shown an excerpt, \
+so never object that the reference list, citations, figures or appendices are \
+absent; you cannot see them. Prefer objections to what IS written: an \
+inference the data cannot carry, a design that cannot support the causal verb \
+used, an untested assumption, a recommendation that outruns the evidence.
+
 Rate severity fatal, major or minor, and give the MINIMUM change that would \
 neutralise it. An objection the author cannot act on is useless. Generic \
 complaints that would apply to any paper are noise. Do not soften a real \
@@ -132,6 +140,7 @@ class Objection:
 @dataclass
 class PaperReview:
     paper_title: str = ""
+    paper_text: str = ""
     claims: list[dict] = field(default_factory=list)
     literature: list[dict] = field(default_factory=list)
     appraisal: dict = field(default_factory=dict)
@@ -148,8 +157,24 @@ class PaperReview:
         return [o for o in self.objections if o.severity == "major"]
 
 
-def _paper_block(title: str, claims: list[dict], limit: int = 8) -> str:
-    lines = [f"PAPER: {title}", "", "ITS CLAIMS:"]
+# The panel must see the document, not our summary of it. An early run
+# reviewed the extracted claim list alone and returned confident objections
+# that the paper "does not report sample size" and "does not describe how
+# sleep was measured" — both stated plainly in a Methods section the
+# reviewers were never shown. Faulting the author for our own extraction gap
+# is worse than raising nothing.
+_TEXT_BUDGET = 12000
+
+
+def _paper_block(title: str, claims: list[dict], text: str = "",
+                 limit: int = 8) -> str:
+    lines = [f"PAPER: {title}"]
+    if text:
+        body = " ".join(text.split())
+        clipped = body[:_TEXT_BUDGET]
+        lines += ["", "THE PAPER ITSELF:", clipped
+                  + ("\n[excerpt truncated]" if len(body) > _TEXT_BUDGET else "")]
+    lines += ["", "CLAIMS EXTRACTED FROM IT:"]
     for i, c in enumerate(claims[:limit], 1):
         lines.append(
             f"  [{i}] {c.get('text', '')}\n"
@@ -196,8 +221,8 @@ def _clean_objection(raw: object) -> str:
 
 def run_reviewer_panel(router: Router, review: PaperReview) -> list[Objection]:
     """Three reviewers, three priors, three lineages."""
-    ctx = (_paper_block(review.paper_title, review.claims) + "\n\n"
-           + _lit_block(review.literature))
+    ctx = (_paper_block(review.paper_title, review.claims, review.paper_text)
+           + "\n\n" + _lit_block(review.literature))
     out: list[Objection] = []
     for role, (name, stance) in zip(REVIEWER_ROLES, REVIEWERS):
         try:
@@ -234,8 +259,9 @@ def appraise(router: Router, review: PaperReview) -> dict:
             Role.ADJUDICATION,
             [{"role": "system", "content": APPRAISAL_SYSTEM},
              {"role": "user", "content":
-                 _paper_block(review.paper_title, review.claims) + "\n\n"
-                 + _lit_block(review.literature) + "\n\nAppraise the evidence base."}],
+                 _paper_block(review.paper_title, review.claims, review.paper_text)
+                 + "\n\n" + _lit_block(review.literature)
+                 + "\n\nAppraise the evidence base."}],
             APPRAISAL_SCHEMA, stage="appraisal")
         return res.data
     except Exception:
@@ -248,8 +274,9 @@ def position(router: Router, review: PaperReview) -> dict:
             Role.ADJUDICATION,
             [{"role": "system", "content": POSITION_SYSTEM},
              {"role": "user", "content":
-                 _paper_block(review.paper_title, review.claims) + "\n\n"
-                 + _lit_block(review.literature) + "\n\nPosition this paper."}],
+                 _paper_block(review.paper_title, review.claims, review.paper_text)
+                 + "\n\n" + _lit_block(review.literature)
+                 + "\n\nPosition this paper."}],
             POSITION_SCHEMA, stage="positioning")
         return res.data
     except Exception:
