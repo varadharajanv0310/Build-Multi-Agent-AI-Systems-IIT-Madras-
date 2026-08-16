@@ -10,6 +10,8 @@ const poller = runPoller({
   onError: (e) => { $("resultBody").innerHTML = errorHTML(e); showPhase("result"); },
 });
 
+window.poller = poller;   // autopilot drives the demo through this
+
 function setMethod(method) {
   state.method = method;
   for (const b of document.querySelectorAll("#methodTabs button")) {

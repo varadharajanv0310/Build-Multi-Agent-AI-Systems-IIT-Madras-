@@ -225,30 +225,37 @@ class ArxivClient(_Base):
 def search_with_fallback(query: str, *, limit: int = 50,
                          from_year: int | None = None,
                          primary=None, log=None) -> tuple[list[Paper], list[str]]:
-    """Try OpenAlex, then fall back to keyless sources.
+    """Search every source concurrently and merge.
+
+    This used to return OpenAlex's hits the moment they were non-empty, which
+    made the other three databases a failure path rather than part of the
+    corpus. The cost was invisible and large: a creatine question answered from
+    OpenAlex alone included 0 of 28 screened papers, where the same question
+    across Crossref and Europe PMC had produced a usable answer. Whichever
+    database happens to answer first is not the same as the literature.
+
+    They cover different literatures — arXiv for CS and physics, Europe PMC for
+    biomedicine, Crossref for the rest, OpenAlex across all of it — so all four
+    run concurrently and every hit is merged. Concurrency means covering four
+    sources costs about what covering one did.
 
     Returns (papers, sources_used). Sources are reported rather than hidden:
-    which database produced a corpus is part of what makes a review defensible,
-    and a fallback corpus is not equivalent to the primary one.
+    which databases produced a corpus is part of what makes a review defensible.
     """
     say = log or (lambda _m: None)
     papers: list[Paper] = []
     used: list[str] = []
 
-    if primary is not None:
+    def _fetch_primary():
+        if primary is None:
+            return "openalex", []
         try:
-            papers = list(primary.search(query, limit=limit, from_year=from_year))
-            if papers:
-                return papers, ["openalex"]
+            return "openalex", list(primary.search(query, limit=limit,
+                                                   from_year=from_year))
         except Exception as e:
-            say(f"      openalex unavailable ({type(e).__name__}); falling back")
+            say(f"      openalex unavailable ({type(e).__name__}); using other sources")
+            return "openalex", []
 
-    # Query every keyless source and merge. They cover different literatures —
-    # arXiv for CS and physics, Europe PMC for biomedicine, Crossref for the
-    # rest — so trying them in sequence and stopping at the first non-empty
-    # result silently picks whichever happens to be listed first, not
-    # whichever actually holds the field. Run them concurrently so covering
-    # all three costs about as long as covering one.
     def _fetch(cls):
         client = cls()
         try:
@@ -260,10 +267,26 @@ def search_with_fallback(query: str, *, limit: int = 50,
         finally:
             client.close()
 
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        for name, hits in pool.map(_fetch, (ArxivClient, EuropePMCClient, CrossrefClient)):
+    per_source: list[list[Paper]] = []
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(_fetch_primary)]
+        futures += [pool.submit(_fetch, c)
+                    for c in (ArxivClient, EuropePMCClient, CrossrefClient)]
+        for f in futures:
+            name, hits = f.result()
             if hits:
-                papers.extend(hits)
+                per_source.append(list(hits))
                 used.append(name)
+
+    # Interleave before truncating. Concatenating would put one database first,
+    # so `limit` would discard whole literatures — the same single-source
+    # failure this function now exists to prevent. Round-robin gives every
+    # database a share of the budget, in relevance order within each.
+    while len(papers) < limit and any(per_source):
+        for bucket in per_source:
+            if bucket:
+                papers.append(bucket.pop(0))
+                if len(papers) >= limit:
+                    break
 
     return papers[:limit], used or ["none"]

@@ -1,25 +1,23 @@
-Every researcher has the same problem before they submit. You have read your own paper forty times, and you can no longer see it. The referee can. Faultline is built for the ninety seconds before you click submit.
+I'm V Varadharajan, and this is Faultline. It does two jobs on one engine. Ask a question, and it answers from the literature. Or hand it your draft, and three independent reviewers attack it before a real referee does. Seven model lineages, in opposed roles.
 
-It does two jobs on one engine. Ask it a question, and it answers from the literature. Or hand it your draft, and it reviews it.
+Here is the second job, on a real paper. This is SEVA, a detector for corpus poisoning in retrieval-augmented generation. Eight months of work, going to IEEE Transactions on Dependable and Secure Computing. Nobody has refereed it yet.
 
-Here is the second one, on a real paper. This is SEVA, a detector for corpus poisoning in retrieval-augmented generation, being prepared for IEEE Transactions on Dependable and Secure Computing after eight months of work. It has never been submitted. Nobody has refereed it yet.
+It reads ten thousand words, pulls out nine empirical claims, and identifies the field on its own. Then three reviewers attack it, each on a different model family, so they do not share blind spots. Six major objections.
 
-Watch what happens. It reads the paper — ten thousand, eight hundred words — and pulls out nine empirical claims, each with its direction, its population, and the conditions the author attached to it. Then it identifies the field on its own: adversarial machine learning, data poisoning detection for retrieval-augmented generation. Nobody told it that.
+The method reviewer went at the headline number. The paper reports zero percent poison evasion with a ninety-five percent Wilson bound, and asked for the base rate, because without it that bound does not mean what it looks like.
 
-Then the part that matters. Three reviewers, each attacking a different axis. One goes at the framing. One goes at the method. One goes at whether the work is significant. And critically, each one runs on a different model family — a Llama, a DeepSeek, a Llama 4. Three prompts on one model gives you three flavours of the same blind spot. Three different lineages actually disagree about what matters, which is what a real review panel does.
+The sharpest one questions the title itself. SEVA claims to be LLM-free, but it depends on pretrained embedding models. A referee can call that external model dependence under another name.
 
-They raised six major objections. Not generic ones.
+Now the other job, in a completely different field. Does creatine improve cognitive performance in healthy adults?
 
-The method reviewer went straight at the headline number: the paper reports zero percent poison evasion with a ninety-five percent Wilson upper bound, and the reviewer asked what the base rate was — because without it, that bound does not mean what it appears to mean.
+It searches four databases at once, screens twenty-nine papers, reads the ones that survive, and answers. Creatine modestly helps, especially during sleep deprivation. Moderate confidence, qualified consensus.
 
-Another called out circular reasoning: the gate prevents all the corruption it detects, which is close to true by construction.
+But the answer alone is not the useful part. Underneath it are five conditions that change it, each tagged with the axis it moves on. Population. Dose, and the benefit is dose-dependent. Setting, because most of the effect appears under sleep deprivation. Duration. And measurement, because the studies used different tests.
 
-And the sharpest one questions the paper's own title. SEVA claims to be LLM-free. But it depends on pretrained embedding models — bge, e5, gte. A referee can argue that is external model dependence wearing a different name. That objection is worth finding now, not in a reviewer response four months from now.
+Every finding names the paper it came from, and it shows you the denominator: thirty-five retrieved, twenty-nine screened, and how many survived. A chat model gives you a handful of papers and no idea what it missed.
 
-Every objection ships with the minimum change that would neutralise it. Not "improve the evaluation" — the specific thing to do.
+The stack. LangGraph for orchestration. Seven model lineages across Ollama locally, plus Groq and OpenRouter free tiers. Retrieval spans OpenAlex, Crossref, Europe PMC and arXiv.
 
-Notice what it did not do. It found no supporting literature for this paper, and it says so, in the interface, in plain numbers. The evidence base is marked thin, because corpus-poisoning defence is a genuinely new field with almost no independent replication. A tool that invented four plausible-sounding citations here would be more impressive and completely useless. Every claim it shows traces back to a specific paper, or it does not appear.
+The paper review took a hundred and thirteen seconds. The question took forty-four. Over ninety percent ran locally on one consumer GPU. Total cost: zero dollars.
 
-That whole run took one hundred and thirteen seconds. Thirty-four model calls. Eighty-two percent of them ran locally on one consumer GPU. Total cost: zero dollars.
-
-Faultline. It reviews the paper you are too close to read.
+Faultline, by V Varadharajan. It reviews the paper you are too close to read.

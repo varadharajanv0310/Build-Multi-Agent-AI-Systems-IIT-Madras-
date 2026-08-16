@@ -14,6 +14,8 @@ const poller = runPoller({
   onError: (e) => { $("resultBody").innerHTML = errorHTML(e); showPhase("result"); },
 });
 
+window.poller = poller;   // autopilot drives the demo through this
+
 async function submit() {
   const question = $("question").value.trim();
   $("inputError").hidden = true;

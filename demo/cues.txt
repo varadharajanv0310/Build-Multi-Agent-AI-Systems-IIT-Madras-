@@ -1,0 +1,19 @@
+rate 15.05 ch/s | total 160.2s
+
+  p01     0.0 ->   17.2  | I'm V Varadharajan, and this is Faultline. It does two jobs 
+  p02    17.2 ->   32.8  | Here is the second job, on a real paper. This is SEVA, a det
+  p03    32.8 ->   47.4  | It reads ten thousand words, pulls out nine empirical claims
+  p04    47.4 ->   62.5  | The method reviewer went at the headline number. The paper r
+  p05    62.5 ->   75.1  | The sharpest one questions the title itself. SEVA claims to 
+  p06    75.1 ->   82.7  | Now the other job, in a completely different field. Does cre
+  p07    82.7 ->   96.6  | It searches four databases at once, screens twenty-nine pape
+  p08    96.6 ->  118.1  | But the answer alone is not the useful part. Underneath it a
+  p09   118.1 ->  132.5  | Every finding names the paper it came from, and it shows you
+  p10   132.5 ->  144.3  | The stack. LangGraph for orchestration. Seven model lineages
+  p11   144.3 ->  155.1  | The paper review took a hundred and thirteen seconds. The qu
+  p12   155.1 ->  160.2  | Faultline, by V Varadharajan. It reviews the paper you are t
+
+ACT1 landing       0.0 ->   17.2   (17.2s)
+ACT2 paper        17.2 ->   75.1   (57.9s)
+ACT3 question     75.1 ->  132.5   (57.4s)
+ACT4 close       132.5 ->  160.2   (27.7s)

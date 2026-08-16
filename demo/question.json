@@ -1,0 +1,189 @@
+{
+  "name": "question",
+  "kind": "answer",
+  "label": "Creatine and cognition",
+  "subject": "Does creatine supplementation improve cognitive performance in healthy adults?",
+  "recordedAt": "2026-08-16T18:14:39+00:00",
+  "runId": "run_245d5d47c14b",
+  "elapsed": 43.68,
+  "stages": [
+    {
+      "label": "Calibrating the field…",
+      "at": 0.03
+    },
+    {
+      "label": "Field: Nutritional neuroscience",
+      "at": 0.03
+    },
+    {
+      "label": "Building the search strategy…",
+      "at": 0.03
+    },
+    {
+      "label": "Searching (5 queries)…",
+      "at": 0.03
+    },
+    {
+      "label": "Found 35 papers → 29 unique (via crossref, europepmc, openalex)",
+      "at": 10.52
+    },
+    {
+      "label": "Screening 29 papers…",
+      "at": 10.52
+    },
+    {
+      "label": "2 relevant, 0 borderline",
+      "at": 31.73
+    },
+    {
+      "label": "Extracting findings from 2 papers…",
+      "at": 31.73
+    },
+    {
+      "label": "Extracted 10 findings (10 usable)",
+      "at": 40.64
+    },
+    {
+      "label": "Synthesising an answer…",
+      "at": 40.64
+    }
+  ],
+  "warning": "",
+  "result": {
+    "kind": "answer",
+    "question": "Does creatine supplementation improve cognitive performance in healthy adults?",
+    "headline": "Creatine modestly enhances cognitive performance in healthy adults, especially during sleep deprivation.",
+    "answer": "Creatine supplementation has been shown to improve cognitive performance in healthy adults, particularly under conditions of sleep deprivation, with benefits observed on tasks such as the DCT, logical and numerical tests, and the Psychomotor Vigilance Test [5][7][8][9][10]. The effect appears dose‑dependent, with higher doses yielding larger gains, and was demonstrated in short‑term studies involving physically active men and mixed‑sex healthy adults.",
+    "confidence": "moderate",
+    "consensus": "qualified",
+    "caveats": [
+      {
+        "axis": "population",
+        "text": "Effects were demonstrated in physically active men and healthy adults, so results may not extend to older, sedentary, or clinical populations."
+      },
+      {
+        "axis": "dose",
+        "text": "Benefits were dose‑dependent, with higher doses (0.35 g/kg) showing larger improvements than lower doses (0.2 g/kg)."
+      },
+      {
+        "axis": "setting",
+        "text": "Most cognitive benefits were observed during sleep deprivation, so effects under normal rested conditions are less certain."
+      },
+      {
+        "axis": "duration",
+        "text": "Studies used short‑term protocols (single dose or 7‑day loading), leaving long‑term effects unknown."
+      },
+      {
+        "axis": "measurement",
+        "text": "Different cognitive tests were used (DCT, logical/numerical tasks, PVT), so the magnitude of benefit may vary by task."
+      }
+    ],
+    "disagreements": [],
+    "whatWouldSettleIt": [
+      "A large, double‑blind, placebo‑controlled trial assessing multiple cognitive domains in a diverse adult sample over several weeks of creatine supplementation under normal sleep conditions."
+    ],
+    "evidence": [
+      {
+        "text": "CrM improved sleep quality compared to PL, as measured with the SSQ scale.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "sleep quality (SSQ scale)",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "CrM was associated with an earlier in-bed time.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "in-bed time",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "CrM did not affect sleep latency, sleep efficiency, or total sleep time.",
+        "direction": "null",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "sleep latency, sleep efficiency, total sleep time",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "CrM resulted in significantly lower muscle soreness scores, as measured by the Hooper questionnaire.",
+        "direction": "negative",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "muscle soreness (Hooper questionnaire)",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "CrM improved cognitive performance on the DCT.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "cognitive performance (DCT)",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "CrM enhanced TD and BD during the 5mSRT.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "physically active men",
+        "outcome": "physical performance (TD, BD in 5mSRT)",
+        "source": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial."
+      },
+      {
+        "text": "A single dose of 0.2 g/kg creatine is associated with a reduced deterioration in cognitive performance during sleep deprivation.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "healthy adults",
+        "outcome": "cognitive performance",
+        "source": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance."
+      },
+      {
+        "text": "Creatine mitigates sleep deprivation-induced deterioration in logical and numerical tasks, language-related processing speed, and the Psychomotor Vigilance Test (PVT).",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "healthy adults",
+        "outcome": "cognitive performance",
+        "source": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance."
+      },
+      {
+        "text": "Females benefit more than males in logic, PVT, and processing speed in language and logic tasks.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "healthy adults",
+        "outcome": "cognitive performance",
+        "source": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance."
+      },
+      {
+        "text": "The effect is less pronounced than with a high dose of 0.35 g/kg, with an improvement of up to 12%.",
+        "direction": "positive",
+        "magnitude": null,
+        "population": "healthy adults",
+        "outcome": "cognitive performance",
+        "source": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance."
+      }
+    ],
+    "corpus": {
+      "databases": [
+        "crossref",
+        "europepmc",
+        "openalex"
+      ],
+      "raw": 35,
+      "unique": 29,
+      "screened": 29,
+      "included": 2,
+      "borderline": 0,
+      "excluded": 27,
+      "field": "Nutritional neuroscience"
+    },
+    "run": {
+      "modelCalls": 20,
+      "localShare": 0.95,
+      "cost": "$0.00"
+    },
+    "error": "",
+    "runId": "run_245d5d47c14b"
+  }
+}
