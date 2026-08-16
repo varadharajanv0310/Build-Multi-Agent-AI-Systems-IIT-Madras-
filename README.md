@@ -11,6 +11,8 @@ Track: **Literature Review & Synthesis**
 [Submission copy](docs/SUBMISSION_COPY.md) ·
 [Deployment](docs/DEPLOY.md)
 
+![Faultline landing page](docs/screenshots/01-landing.png)
+
 ---
 
 ## The problem
@@ -76,6 +78,33 @@ Three of what it raised:
   models.
 
 None appeared in the authors' own limitations section.
+
+---
+
+## What it looks like
+
+Named stages report as they complete, and a database going down surfaces as a
+warning rather than a failure.
+
+![A run in progress](docs/screenshots/03-running.png)
+
+The answer, with confidence and consensus reported separately and the
+conditions that change it tagged by axis.
+
+![Answer to a literature question](docs/screenshots/04-answer.png)
+
+Every finding carries its direction, population, outcome measure and the paper
+it came from. This is what "traceable" means concretely.
+
+![Evidence list with sources](docs/screenshots/05-evidence.png)
+
+The reviewer panel. Each reviewer runs on a different model lineage, and every
+objection ships with the minimum change that would neutralise it.
+
+![Reviewer panel objections](docs/screenshots/07-panel.png)
+
+<sub>More: [two jobs](docs/screenshots/02-two-jobs.png) ·
+[review summary](docs/screenshots/06-review.png)</sub>
 
 ---
 

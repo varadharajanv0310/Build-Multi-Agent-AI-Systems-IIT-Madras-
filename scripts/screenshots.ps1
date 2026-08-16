@@ -57,18 +57,17 @@ function Assert-Foreground {
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 
-# name, url path+query, seconds to settle before the grab
+# The seven that carry the story: the landing page, both jobs mid-run and at
+# their result, and the two screens that make the case — the reviewer panel and
+# the corpus funnel. Input forms are omitted; they photograph as empty boxes.
 $shots = @(
-  @{ n = "01-landing";        u = "/";                                                          w = 6 },
-  @{ n = "02-landing-jobs";   u = "/?autopilot=1&still=1&scroll=0.17";                          w = 7 },
-  @{ n = "03-landing-panel";  u = "/?autopilot=1&still=1&scroll=0.40";                          w = 7 },
-  @{ n = "04-ask-input";      u = "/ask";                                                       w = 6 },
-  @{ n = "05-ask-result";     u = "/ask?autopilot=1&still=1&demo=question";                     w = 16 },
-  @{ n = "06-ask-evidence";   u = "/ask?autopilot=1&still=1&demo=question&open=1&scroll=0.62";  w = 18 },
-  @{ n = "07-review-input";   u = "/review";                                                    w = 6 },
-  @{ n = "08-review-result";  u = "/review?autopilot=1&still=1&demo=seva";                      w = 18 },
-  @{ n = "09-review-panel";   u = "/review?autopilot=1&still=1&demo=seva&scroll=0.42";          w = 20 },
-  @{ n = "10-review-claims";  u = "/review?autopilot=1&still=1&demo=seva&open=1&scroll=0.80";   w = 20 }
+  @{ n = "01-landing";       u = "/";                                                          w = 7 },
+  @{ n = "02-two-jobs";      u = "/?autopilot=1&still=1&scroll=0.17";                          w = 8 },
+  @{ n = "03-running";       u = "/review?autopilot=1&demo=seva&t=0&speed=1&compress=3";        w = 26 },
+  @{ n = "04-answer";        u = "/ask?autopilot=1&still=1&demo=question";                     w = 16 },
+  @{ n = "05-evidence";      u = "/ask?autopilot=1&still=1&demo=question&open=1&scroll=0.66";  w = 18 },
+  @{ n = "06-review";        u = "/review?autopilot=1&still=1&demo=seva";                      w = 18 },
+  @{ n = "07-panel";         u = "/review?autopilot=1&still=1&demo=seva&scroll=0.42";          w = 20 }
 )
 
 foreach ($s in $shots) {
@@ -95,10 +94,21 @@ foreach ($s in $shots) {
   }
   Start-Sleep -Seconds $s.w
 
+  if (-not $app) { Write-Warning "   no window; skipped"; continue }
+  # Check immediately before the grab. gdigrab takes whatever is on top, and a
+  # first run of this captured the operator's own browser and a chat window.
+  if (-not (Assert-Foreground $app.MainWindowHandle $s.n)) { continue }
+
   $png = Join-Path $OutDir "$($s.n).png"
   & $ffbin -hide_banner -loglevel error -y -f gdigrab `
      -video_size "${Width}x${Height}" -offset_x 0 -offset_y $OffsetY -i desktop `
      -frames:v 1 -vf "scale=${Scale}:-2" $png
+
+  # And again after: focus can change during the grab itself.
+  if (-not (Assert-Foreground $app.MainWindowHandle $s.n)) {
+    Remove-Item $png -Force -ErrorAction SilentlyContinue
+    continue
+  }
   if (Test-Path $png) {
     Write-Host ("   {0} KB" -f [math]::Round((Get-Item $png).Length / 1KB))
   } else {
