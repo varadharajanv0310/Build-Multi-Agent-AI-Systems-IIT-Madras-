@@ -1,0 +1,269 @@
+{
+  "name": "seva",
+  "kind": "review",
+  "label": "SEVA — IEEE TDSC submission",
+  "subject": "SEVA_tdsc.pdf",
+  "recordedAt": "2026-08-16T17:47:26+00:00",
+  "runId": "run_d375b1cc3d94",
+  "elapsed": 113.13,
+  "stages": [
+    {
+      "label": "Loading your paper…",
+      "at": 0.01
+    },
+    {
+      "label": "Reading your claims…",
+      "at": 0.59
+    },
+    {
+      "label": "Found 9 claims in your paper",
+      "at": 44.69
+    },
+    {
+      "label": "Calibrating the field…",
+      "at": 44.69
+    },
+    {
+      "label": "Field: Adversarial Machine Learning – Data Poisoning Detection for Retrieval‑Augmented Generation",
+      "at": 44.69
+    },
+    {
+      "label": "Building the search strategy…",
+      "at": 44.69
+    },
+    {
+      "label": "Searching (5 queries)…",
+      "at": 48.14
+    },
+    {
+      "label": "Found 35 papers → 27 unique (via openalex)",
+      "at": 53.43
+    },
+    {
+      "label": "Screening 27 papers…",
+      "at": 53.43
+    },
+    {
+      "label": "0 relevant, 0 borderline",
+      "at": 72.74
+    },
+    {
+      "label": "Extracting findings from 0 papers…",
+      "at": 72.74
+    },
+    {
+      "label": "Extracted 0 findings (0 usable)",
+      "at": 72.74
+    },
+    {
+      "label": "Convening the reviewer panel (3 lineages)…",
+      "at": 72.74
+    },
+    {
+      "label": "9 objections raised",
+      "at": 110.94
+    },
+    {
+      "label": "Appraising the evidence base…",
+      "at": 110.94
+    }
+  ],
+  "warning": "",
+  "result": {
+    "kind": "review",
+    "paper": {
+      "title": "SEVA: Lightweight, LLM-Free Detection of Templated Corpus Poisoning in Retrieval-Augmented Generation",
+      "meta": "READ FROM YOUR DOCUMENT · 10,867 WORDS"
+    },
+    "counts": [
+      {
+        "n": 9,
+        "label": "YOUR CLAIMS FOUND",
+        "accent": false
+      },
+      {
+        "n": 0,
+        "label": "LITERATURE FINDINGS",
+        "accent": false
+      },
+      {
+        "n": 0,
+        "label": "FATAL OBJECTIONS",
+        "accent": false
+      },
+      {
+        "n": 6,
+        "label": "MAJOR OBJECTIONS",
+        "accent": false
+      }
+    ],
+    "fatalAlert": "",
+    "novelty": {
+      "verdict": "UNCLEAR",
+      "placement": "",
+      "draftSentence": "",
+      "dismissalRisk": "",
+      "mustCite": []
+    },
+    "panel": [
+      {
+        "name": "Framing",
+        "lineage": "llama",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "The paper assumes that the templated multi-passage poisoning attack is the dominant attack pattern without providing sufficient evidence to support this claim.",
+            "fix": "Provide a more comprehensive analysis of existing attack patterns and their prevalence to justify the focus on templated multi-passage poisoning."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The evaluation protocol is limited to a specific set of corpora and attack scenarios, which may not be representative of real-world scenarios.",
+            "fix": "Conduct a more extensive evaluation of SEVA using a diverse set of corpora, attack scenarios, and experimental settings to demonstrate its robustness and generalizability."
+          },
+          {
+            "severity": "MINOR",
+            "text": "The paper does not provide a clear explanation of how the geometric signal is calculated and how it is used to detect templated poisoning attacks.",
+            "fix": "Add a detailed description of the geometric signal calculation and its role in the detection process to improve the paper's clarity and readability."
+          }
+        ]
+      },
+      {
+        "name": "Method",
+        "lineage": "deepseek",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "Claim [1] asserts 'SEVA drives templated poison-evasion to 0%' with a '95% Wilson upper bound of 0.0154% from 25,000 templated encounters at the frozen gate — at a 0.58% document-level false-positive rate'. This conflates an observed zero-events-in-25,000-trial result with a population parameter of zero; the Wilson upper bound is a one-sided bound that depends on a specific assumed binomial model and does not rule out unobserved evasion modes or arbitrary contamination densities, so the claim of 'drives to 0%' overstates what the data can support.",
+            "fix": "Replace the '0%' claim with a statement of the empirical evasion rate (0/25,000) and its exact one-sided 95% confidence bound (e.g., ≤0.015%), and explicitly state that this bound is conditional on the tested seeds, calibration split, and contamination levels."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "Claim [5] that host-anchored cloning 'evades the gate on every target' and that 'the bypass is not expensive: it corrupts 26–28% of targets, more than the templated attack achieves undefended' is methodologically undersupported: the paper does not report how many cloning passages or documents were injected per target, how the 'benign host' was selected, nor whether the 26–28% attack-success measure is computed over the same number of targets or retrieval windows as the templated attack's 18% – without such calibration the comparison of raw percentages is meaningless.",
+            "fix": "Report, for the cloning attack and the templated attack, the same metric (e.g., attack-success rate, with identical target set size, contamination density, and retrieval window) and include the injection budget (number of passages per target) so that the reader can compare the two attack modes fairly."
+          },
+          {
+            "severity": "MINOR",
+            "text": "Claim [4] states 'the gate prevents all the corruption it detects: the templated attack corrupts 18% of targets undefended and 0% with the gate in the loop.' This is a circular restatement: 'prevents all the corruption it detects' reduces to the definition of the gate (detected passages are dropped); the meaningful empirical claim is the end-to-end target-corruption rate after gating, which the paper reports as 0% only for the templated attack under the specific calibration that already drives evasion to 0% – it does not measure whether the gate introduces a new vulnerability by dropping clean",
+            "fix": "Acknowledge that the 0% corruption rate applies only to the templated attack at the frozen gate, and report the end-to-end generation quality (e.g., answer accuracy or F1) on clean queries with and without the gate, so the reader can weigh the security benefit against any utility loss."
+          }
+        ]
+      },
+      {
+        "name": "Significance",
+        "lineage": "llama4",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "The paper claims that SEVA detects templated multi-passage poisoning at 0% poison-evasion across three seeds, but it does not provide a detailed analysis of why the host-anchored cloning attack is not considered a significant threat despite corrupting 26-28% of targets.",
+            "fix": "Provide a more detailed discussion on the practicality and feasibility of the host-anchored cloning attack and its implications for SEVA's effectiveness."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The evaluation of SEVA is performed under a specific set of conditions (1-10% contamination density, frozen non-oracle calibration), and it is unclear how SEVA would perform under different conditions or more diverse attack scenarios.",
+            "fix": "Include a more comprehensive evaluation of SEVA under varying conditions and attack scenarios to strengthen the claims about its robustness and effectiveness."
+          },
+          {
+            "severity": "MINOR",
+            "text": "The claim that SEVA is 'fully local, LLM-free' might be misleading if it relies on pre-trained embedding models (e.g., bge, e5, gte) that could be considered as a form of external dependency or pre-registration.",
+            "fix": "Clarify the definition of 'fully local, LLM-free' and discuss the implications of using pre-trained embedding models in the context of SEVA's deployment requirements."
+          }
+        ]
+      }
+    ],
+    "base": {
+      "quality": "THIN",
+      "assessment": "The field of corpus‑poisoning detection for Retrieval‑Augmented Generation is still nascent. Only a handful of attack papers (e.g., PoisonedRAG, CatPoison) and a few defense proposals exist, and most evaluations are confined to the same benchmark suites with limited independent replication. Consequently, the overall evidence supporting the efficacy of proposed defenses, including geometric‑signal approaches like SEVA, remains modest and not yet robustly validated.",
+      "systemic": [
+        {
+          "text": "publication bias"
+        },
+        {
+          "text": "small-sample norms"
+        },
+        {
+          "text": "benchmark overfitting"
+        },
+        {
+          "text": "absent replication"
+        },
+        {
+          "text": "unfalsifiable framing"
+        }
+      ],
+      "construct": "Cluster‑coherence as a detection construct reliably flags templated multi‑passage poison but does not capture more sophisticated attacks (e.g., host‑anchored cloning) that break the mutual‑similarity assumption, indicating limited construct validity for the broader class of corpus‑poisoning threats."
+    },
+    "claims": [
+      {
+        "n": "01",
+        "text": "SEVA drives templated poison-evasion to 0% across three seeds—a 95% Wilson upper bound of 0.0154% from 25,000 templated encounters at the frozen gate—at a 0.58% document-level false-positive rate, under frozen non-oracle calibration and 1–10% contamination density.",
+        "direction": "positive",
+        "population": "in-domain",
+        "scope": "three seeds, frozen non-oracle calibration, 1–10% contamination density"
+      },
+      {
+        "n": "02",
+        "text": "On PoisonedRAG’s own released poison for the field’s general-domain benchmarks (Natural Questions, HotpotQA), and a faithful black-box build on the in-domain Security corpus, it catches the attack at 82–98%.",
+        "direction": "positive",
+        "population": "general-domain benchmarks (Natural Questions, HotpotQA) and in-domain Security corpus",
+        "scope": "PoisonedRAG’s own released poison, faithful black-box build"
+      },
+      {
+        "n": "03",
+        "text": "The lexical duplicate filtering PoisonedRAG itself found insufficient proves corpus-fragile at matched false-positive rate.",
+        "direction": "negative",
+        "population": "duplicate-dense corpora",
+        "scope": "matched false-positive rate"
+      },
+      {
+        "n": "04",
+        "text": "The gate prevents all the corruption it detects: the templated attack corrupts 18% of targets undefended and 0% with the gate in the loop.",
+        "direction": "positive",
+        "population": "targets",
+        "scope": "undefended targets, gate in the loop"
+      },
+      {
+        "n": "05",
+        "text": "Host-anchored cloning—one benign host mimicked per injected passage—evades the gate on every target while staying retrievable, no complementary geometric signal we tested closes the gap, and the bypass is not expensive: it corrupts 26–28% of targets, more than the templated attack achieves undefended.",
+        "direction": "negative",
+        "population": "targets",
+        "scope": "host-anchored cloning, no complementary geometric signal"
+      },
+      {
+        "n": "06",
+        "text": "Reproducing CleanBase, the closest corpus-level peer, at a matched operating point yields the same pattern (100% templated, 0% clones), so the boundary belongs to the shared mutual-similarity assumption rather than to our statistic.",
+        "direction": "null",
+        "population": "corpus-level peer (CleanBase)",
+        "scope": "matched operating point"
+      },
+      {
+        "n": "07",
+        "text": "The signal is encoder-invariant—templated-poison detection generalizes across three embedding models of independent lineages, bge (BAAI), e5 (Microsoft), and gte (Alibaba)—and reproducible to within 5 × 10−7 across two accelerator backends (CUDA and Apple Silicon) on a byte-identical, hash-verified corpus, several cells bit-identical.",
+        "direction": "positive",
+        "population": "embedding models (bge, e5, gte)",
+        "scope": "byte-identical, hash-verified corpus, two accelerator backends"
+      },
+      {
+        "n": "08",
+        "text": "Detection stays flat to a million documents (sub-millisecond retrieval-plus-gate cost at 10× the primary corpus, the O(log N ) claim measured, not extrapolated), and SEVA runs in 13–38 ms per query with no LLM, API, or pre-registration;",
+        "direction": "positive",
+        "population": "documents",
+        "scope": "a million documents, no LLM, API, or pre-registration"
+      },
+      {
+        "n": "09",
+        "text": "In a reproduced, shared-corpus, matched-FPR head-to-head it catches 100% of templated poison to the per-query state of the art’s ∼89%, which that baseline fails at matched false-positive rate.",
+        "direction": "positive",
+        "population": "shared-corpus, matched-FPR",
+        "scope": "reproduced, shared-corpus, matched-FPR"
+      }
+    ],
+    "run": {
+      "modelCalls": 34,
+      "localShare": 0.8235,
+      "cost": "$0.00"
+    },
+    "degraded": "",
+    "error": "",
+    "runId": "run_d375b1cc3d94"
+  }
+}
