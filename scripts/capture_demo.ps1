@@ -45,7 +45,7 @@ param(
 
   [string]$OutDir     = "demo\recording",
   [string]$ScriptFile = "demo\narration.txt",
-  [string]$VoiceId    = "JBFqnCBsd6RMkjVDRZzb",   # "George" — calm, neutral
+  [string]$VoiceId    = "",                       # falls back to .env, then "George"
   [string]$ModelId    = "eleven_multilingual_v2"
 )
 
@@ -137,15 +137,30 @@ if ($Record) {
 
 # --- narrate -----------------------------------------------------------------
 if ($Narrate) {
-  $key = $env:ELEVENLABS_API_KEY
-  if (-not $key) {
-    # Fall back to the project's .env so the key lives in one place.
-    if (Test-Path ".env") {
-      $line = Get-Content ".env" | Where-Object { $_ -match "^\s*ELEVENLABS_API_KEY\s*=" } | Select-Object -First 1
-      if ($line) { $key = ($line -split "=", 2)[1].Trim() }
-    }
+  # Both settings live in .env so the secret sits in exactly one gitignored
+  # place; an explicit -VoiceId or environment variable still wins.
+  function Get-DotEnv([string]$Name) {
+    if (-not (Test-Path ".env")) { return "" }
+    $line = Get-Content ".env" | Where-Object { $_ -match "^\s*$Name\s*=" } | Select-Object -First 1
+    if ($line) { return ($line -split "=", 2)[1].Trim() }
+    return ""
   }
-  if (-not $key) { throw "ELEVENLABS_API_KEY not set (env var or .env)" }
+
+  $key = $env:ELEVENLABS_API_KEY
+  if (-not $key) { $key = Get-DotEnv "ELEVENLABS_API_KEY" }
+  if (-not $key) {
+    throw "ELEVENLABS_API_KEY not set (env var or .env). See demo\ELEVENLABS.md"
+  }
+  # The API Keys page lists the key's ID, not the key. Catch that here rather
+  # than letting it surface as an opaque HTTP 400 after the call.
+  if ($key -notmatch '^sk_') {
+    throw ("That looks like the key ID, not the key. ElevenLabs API keys start " +
+           "with 'sk_' and are shown only in the dialog at creation (or after " +
+           "Rotate). See demo\ELEVENLABS.md step 2.")
+  }
+
+  if (-not $VoiceId) { $VoiceId = Get-DotEnv "ELEVENLABS_VOICE_ID" }
+  if (-not $VoiceId) { $VoiceId = "JBFqnCBsd6RMkjVDRZzb" }   # "George"
   if (-not (Test-Path $ScriptFile)) { throw "narration script not found: $ScriptFile" }
 
   $text = (Get-Content $ScriptFile -Raw).Trim()

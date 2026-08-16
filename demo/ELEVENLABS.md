@@ -23,9 +23,21 @@ tier covers the demo and several retakes.
 1. Click your **profile icon** (bottom-left of the dashboard).
 2. Choose **API Keys** (on some builds: *Profile + API key*).
 3. Click **Create API Key**, name it `faultline-demo`.
-4. **Copy it now** — ElevenLabs shows the full key exactly once.
+4. A dialog shows the key **once**. Copy it from that dialog.
 
-The key looks like `sk_` followed by a long hex string.
+> **The two values look similar and only one works.**
+>
+> | | Looks like | Works? |
+> |---|---|---|
+> | **API key** (the secret) | `sk_` + long hex, shown once in the creation dialog | yes |
+> | **Key ID** (the identifier) | bare 64-char hex, listed on the API Keys page | **no** |
+>
+> The list page shows the *ID*, not the key. Passing the ID gets you:
+> `"API key ID used as API key ... API keys start with 'sk_'"`.
+>
+> **Missed the dialog?** The secret cannot be retrieved later. Click the
+> **⋯ menu → Rotate** on the key (or delete it and create a new one), and copy
+> the `sk_...` value from the dialog this time.
 
 ## 3. Give it to the script
 
