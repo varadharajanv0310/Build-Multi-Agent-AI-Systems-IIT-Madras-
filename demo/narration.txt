@@ -20,4 +20,4 @@ The stack. LangGraph for orchestration. Seven model lineages across Ollama local
 
 The paper review took a hundred and thirteen seconds. The question took forty-four. Over ninety percent ran locally on one consumer GPU. Total cost: zero dollars.
 
-Faultline, by V Varadharajan. It reviews the paper you are too close to read.
+Faultline. Built by V Varadharajan and A Sowmiya Priya, from SRM. It reviews the paper you are too close to read.
