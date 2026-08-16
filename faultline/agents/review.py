@@ -53,14 +53,21 @@ author can fix problems before a real referee finds them.
 
 {stance}
 
-Give your three strongest objections. For each: state it concretely, rate its \
-severity, and give the MINIMUM change that would neutralise it. Objections the \
-author cannot act on are useless.
+Return AT LEAST TWO and at most three objections. This is not optional. A \
+pre-submission review that raises nothing is worthless, because the real \
+referee will not be so generous, and every paper has at least two things a \
+determined critic on your axis can press. If you genuinely cannot fault the \
+substance, take the weakest-supported claim and the least-justified \
+methodological choice and rate them "minor".
 
-Be specific to this paper. Generic methodology complaints that would apply to \
-any paper are noise. If the paper is genuinely strong on your axis, say so in \
-strongest_point rather than manufacturing a complaint - but do not soften a \
-real problem to be polite."""
+Each objection is a complete sentence naming what you are attacking - quote or \
+reference the specific claim. Do not emit field labels, headings, or fragments \
+as the objection text.
+
+Rate severity fatal, major or minor, and give the MINIMUM change that would \
+neutralise it. An objection the author cannot act on is useless. Generic \
+complaints that would apply to any paper are noise. Do not soften a real \
+problem to be polite."""
 
 APPRAISAL_SCHEMA = {
     "type": "object",
@@ -165,6 +172,28 @@ def _lit_block(literature: list[dict], limit: int = 14) -> str:
     return "\n".join(lines)
 
 
+_FIELD_LABELS = ("objection", "severity", "minimum_fix", "minimum fix",
+                 "fix", "reviewer", "strongest_point")
+
+
+def _clean_objection(raw: object) -> str:
+    """Strip field-label leakage from an objection.
+
+    Models under load echo the schema back into the value — one review came
+    back with an objection whose entire text was "severity:". A fragment like
+    that is not an objection and showing it makes the whole panel look broken.
+    """
+    text = " ".join(str(raw or "").split())
+    for label in _FIELD_LABELS:
+        if text.lower().startswith(label + ":"):
+            text = text[len(label) + 1:].strip()
+    # Anything that is only a label, or too short to be a claim about the
+    # paper, is an artefact rather than a finding.
+    if len(text) < 25 or text.rstrip(":").lower() in _FIELD_LABELS:
+        return ""
+    return text
+
+
 def run_reviewer_panel(router: Router, review: PaperReview) -> list[Objection]:
     """Three reviewers, three priors, three lineages."""
     ctx = (_paper_block(review.paper_title, review.claims) + "\n\n"
@@ -180,10 +209,21 @@ def run_reviewer_panel(router: Router, review: PaperReview) -> list[Objection]:
         except Exception:
             continue
         for o in (res.data.get("objections") or [])[:3]:
+            # Schema asks for objects, but a model under load will sometimes
+            # return bare strings. Losing the whole panel to an AttributeError
+            # is a worse outcome than a partly-populated objection.
+            if isinstance(o, str):
+                o = {"objection": o}
+            elif not isinstance(o, dict):
+                continue
+            text = _clean_objection(o.get("objection", ""))
+            if not text:
+                continue
+            severity = str(o.get("severity", "minor")).lower()
             out.append(Objection(
                 reviewer=name, lineage=res.lineage,
-                objection=str(o.get("objection", ""))[:600],
-                severity=str(o.get("severity", "minor")),
+                objection=text[:600],
+                severity=severity if severity in ("fatal", "major", "minor") else "minor",
                 minimum_fix=str(o.get("minimum_fix", ""))[:400]))
     return out
 

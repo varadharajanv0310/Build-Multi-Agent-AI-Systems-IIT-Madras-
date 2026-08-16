@@ -13,6 +13,8 @@ a replacement. But a degraded corpus beats no corpus.
 from __future__ import annotations
 
 import time
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Iterator
 
 import httpx
@@ -133,6 +135,93 @@ class EuropePMCClient(_Base):
             fulltext_source="abstract_only" if item.get("abstractText") else "none")
 
 
+class ArxivClient(_Base):
+    """Computer science, physics, maths and quantitative biology.
+
+    The keyless sources are not interchangeable. Europe PMC is biomedical and
+    Crossref has patchy abstracts, so a query about adversarial machine
+    learning returned eight off-domain papers that screening rightly threw
+    out — the corpus was empty not because the work does not exist but
+    because nobody asked arXiv, where that literature actually lives.
+    """
+
+    name = "arxiv"
+    base_url = "https://export.arxiv.org/api"
+
+    # arXiv asks for ~3s between requests. Being impolite here gets IP-banned,
+    # which is a far worse outcome than a slow search.
+    def __init__(self, timeout: float = 60.0, min_interval: float = 3.0):
+        super().__init__(timeout=timeout, min_interval=min_interval)
+
+    def _get(self, path: str, params: dict[str, Any]) -> str:  # type: ignore[override]
+        gap = time.monotonic() - self._last
+        if gap < self._min_interval:
+            time.sleep(self._min_interval - gap)
+        self._last = time.monotonic()
+        r = self._client.get(f"{self.base_url}{path}", params=params)
+        r.raise_for_status()
+        return r.text
+
+    def search(self, query: str, *, limit: int = 50,
+               from_year: int | None = None, **_: Any) -> Iterator[Paper]:
+        terms = clean_query(query).split()
+        if not terms:
+            return
+        # Field-scoped AND across terms: `all:` alone matches far too loosely
+        # and returns unrelated preprints for multi-word topics.
+        expr = " AND ".join(f'all:"{t}"' if " " in t else f"all:{t}" for t in terms[:8])
+        try:
+            body = self._get("/query", {
+                "search_query": expr,
+                "start": 0,
+                "max_results": min(100, limit * 2),
+                "sortBy": "relevance",
+            })
+        except Exception:
+            return
+
+        ns = {"a": "http://www.w3.org/2005/Atom"}
+        try:
+            root = ET.fromstring(body)
+        except ET.ParseError:
+            return
+
+        count = 0
+        for entry in root.findall("a:entry", ns):
+            paper = self._to_paper(entry, ns)
+            if paper is None:
+                continue
+            if from_year and paper.year and paper.year < from_year:
+                continue
+            yield paper
+            count += 1
+            if count >= limit:
+                return
+
+    @staticmethod
+    def _to_paper(entry, ns) -> Paper | None:
+        def text(tag: str) -> str:
+            el = entry.find(f"a:{tag}", ns)
+            return " ".join((el.text or "").split()) if el is not None else ""
+
+        title = text("title")
+        summary = text("summary")
+        if not title or not summary:
+            return None
+        raw_id = text("id")
+        arxiv_id = raw_id.rstrip("/").rsplit("/", 1)[-1] if raw_id else ""
+        published = text("published")
+        year = int(published[:4]) if published[:4].isdigit() else None
+        authors = [" ".join((a.findtext("a:name", "", ns) or "").split())
+                   for a in entry.findall("a:author", ns)][:25]
+        doi = entry.findtext("{http://arxiv.org/schemas/atom}doi") or None
+        return Paper(
+            id=f"arxiv:{arxiv_id}", title=title, year=year, doi=doi,
+            venue="arXiv", authors=authors, abstract=summary,
+            arxiv_id=arxiv_id, oa_status="green", source="arxiv",
+            type="preprint", fulltext_source="abstract_only")
+
+
 def search_with_fallback(query: str, *, limit: int = 50,
                          from_year: int | None = None,
                          primary=None, log=None) -> tuple[list[Paper], list[str]]:
@@ -154,19 +243,27 @@ def search_with_fallback(query: str, *, limit: int = 50,
         except Exception as e:
             say(f"      openalex unavailable ({type(e).__name__}); falling back")
 
-    for client_cls in (EuropePMCClient, CrossrefClient):
-        client = client_cls()
+    # Query every keyless source and merge. They cover different literatures —
+    # arXiv for CS and physics, Europe PMC for biomedicine, Crossref for the
+    # rest — so trying them in sequence and stopping at the first non-empty
+    # result silently picks whichever happens to be listed first, not
+    # whichever actually holds the field. Run them concurrently so covering
+    # all three costs about as long as covering one.
+    def _fetch(cls):
+        client = cls()
         try:
-            hits = [p for p in client.search(query, limit=limit, from_year=from_year)
-                    if p.abstract]
-            if hits:
-                papers.extend(hits)
-                used.append(client.name)
+            return cls.name, [p for p in client.search(query, limit=limit,
+                                                       from_year=from_year)
+                              if p.abstract]
         except Exception:
-            pass
+            return cls.name, []
         finally:
             client.close()
-        if len(papers) >= limit:
-            break
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for name, hits in pool.map(_fetch, (ArxivClient, EuropePMCClient, CrossrefClient)):
+            if hits:
+                papers.extend(hits)
+                used.append(name)
 
     return papers[:limit], used or ["none"]
