@@ -62,8 +62,13 @@ def clean_query(question: str, drop_stopwords: bool = True) -> str:
 
 
 class OpenAlexClient:
-    def __init__(self, timeout: float = 60.0, max_retries: int = 3):
+    def __init__(self, timeout: float = 60.0, max_retries: int = 5,
+                 min_interval: float = 0.15):
         self.max_retries = max_retries
+        # Client-side throttle. Cheaper than discovering the limit via 429s,
+        # which cost a corpus rather than a request.
+        self._min_interval = min_interval
+        self._last_request = 0.0
         self._client = httpx.Client(
             timeout=timeout,
             headers={"User-Agent": SETTINGS.user_agent, "Accept": "application/json"},
@@ -75,19 +80,45 @@ class OpenAlexClient:
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         if self._mailto:
             params = {**params, "mailto": self._mailto}
+
+        # OpenAlex's polite pool allows ~10 requests/second. Firing queries back
+        # to back trips it, and the resulting 429s silently shrink the corpus —
+        # a run that should have returned 100+ papers came back with 14, which
+        # is indistinguishable from "the literature is thin" unless you look.
+        elapsed = time.monotonic() - self._last_request
+        if elapsed < self._min_interval:
+            time.sleep(self._min_interval - elapsed)
+
         last: Exception | None = None
         for attempt in range(self.max_retries):
+            self._last_request = time.monotonic()
             try:
                 r = self._client.get(f"{BASE}{path}", params=params)
-                if r.status_code == 429:
-                    time.sleep(2 ** attempt)
-                    continue
-                r.raise_for_status()
-                return r.json()
             except httpx.HTTPError as e:
                 last = e
                 time.sleep(1.5 ** attempt)
-        raise RuntimeError(f"openalex {path} failed after {self.max_retries}: {last}")
+                continue
+
+            if r.status_code == 429:
+                # Honour Retry-After when given; otherwise back off hard. A 429
+                # is a real signal to slow down, not a transient blip.
+                wait = float(r.headers.get("Retry-After") or 0) or min(2 ** (attempt + 2), 30)
+                last = RuntimeError(f"rate limited (429), waited {wait:.0f}s")
+                time.sleep(wait)
+                continue
+            if r.status_code >= 500:
+                last = RuntimeError(f"server error {r.status_code}")
+                time.sleep(1.5 ** attempt)
+                continue
+            try:
+                r.raise_for_status()
+            except httpx.HTTPError as e:
+                raise RuntimeError(f"openalex {path}: {e}") from e
+            return r.json()
+
+        raise RuntimeError(
+            f"openalex {path} failed after {self.max_retries} attempts: "
+            f"{last or 'no response'}")
 
     def search(
         self,
