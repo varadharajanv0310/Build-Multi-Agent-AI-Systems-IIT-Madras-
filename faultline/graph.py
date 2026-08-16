@@ -171,7 +171,11 @@ def after_conflicts(state: FaultlineState) -> str:
     """
     if state.get("conflicts"):
         return "council"
-    if not state.get("widened") and len(state.get("usable", [])) < 4:
+    # No conflicts is the trigger, not just thin claims. A narrow corpus that
+    # happens to agree with itself looks identical to a literature that
+    # agrees — and conflating those two is precisely how a false consensus is
+    # manufactured. Widen once before concluding the field is settled.
+    if not state.get("widened"):
         return "widen"
     return END
 

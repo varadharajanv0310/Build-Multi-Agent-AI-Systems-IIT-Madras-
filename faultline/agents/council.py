@@ -157,14 +157,21 @@ is legitimate at all.
 {stance}
 
 State your argument in one or two sentences, grounded in the specific \
-qualifiers shown. Do not hedge toward the middle to seem balanced - argue your \
-assigned reading honestly, and if the evidence genuinely defeats it, say so."""
+qualifiers shown. Judge independently. Do not hedge toward the middle to seem \
+balanced, and do not strain to find either a shared construct or a difference \
+that does not matter."""
 
-STANCE_A = ("Your assigned reading: these findings ARE commensurable. Look for "
-            "the shared construct. Do not manufacture agreement that is not there.")
-STANCE_B = ("Your assigned reading: these findings are NOT commensurable. Look "
-            "for the dimension on which they differ materially. Do not manufacture "
-            "a difference that does not matter.")
+# Both assessors get the SAME neutral instruction and differ only in training
+# lineage. An earlier version assigned them opposing stances to argue, which
+# produced a 100% "disagreement" rate that measured nothing: they disagreed
+# because they were told to. Independence has to come from the models, not
+# from the prompt, or the agreement rate is theatre.
+NEUTRAL_STANCE = (
+    "Judge honestly in whichever direction the evidence points. Two findings "
+    "measuring genuinely different constructs are NOT commensurable even if "
+    "they share a topic; two findings measuring the same construct in "
+    "different settings usually ARE."
+)
 
 
 def candidate_pairs(claims: list[dict], max_pairs: int = 60) -> list[ClaimPair]:
@@ -199,12 +206,11 @@ def assess_commensurability(
     for pair in pairs:
         body = (f"FINDING 1\n{_describe(pair.a)}\n\nFINDING 2\n{_describe(pair.b)}\n\n"
                 "Are these two findings commensurable?")
-        msgs_a = [{"role": "system",
-                   "content": COMM_SYSTEM_BASE.format(contract=contract, stance=STANCE_A)},
+        prompt = [{"role": "system",
+                   "content": COMM_SYSTEM_BASE.format(contract=contract,
+                                                      stance=NEUTRAL_STANCE)},
                   {"role": "user", "content": body}]
-        msgs_b = [{"role": "system",
-                   "content": COMM_SYSTEM_BASE.format(contract=contract, stance=STANCE_B)},
-                  {"role": "user", "content": body}]
+        msgs_a = msgs_b = prompt
 
         a_res, b_res, agreed = router.opposed(
             Role.COMMENSURABILITY_A, Role.COMMENSURABILITY_B,
@@ -228,12 +234,52 @@ def assess_commensurability(
             })
         store.insert_many("commensurability", rows)
 
-        # Both agreeing that it is comparable is the only clean pass. A split
-        # is NOT resolved by majority here — it is carried forward as a
-        # low-confidence conflict so the adjudicator sees the disagreement.
         votes = [bool(x.get("comparable")) for x in pair.assessments]
-        pair.comparable = bool(votes) and any(votes)
+        if not votes:
+            pair.comparable = False
+        elif all(votes):
+            pair.comparable = True          # both lineages agree: comparable
+        elif not any(votes):
+            pair.comparable = False         # both agree: not comparable
+        else:
+            # Genuine split between lineages. This is the interesting case, so
+            # it escalates to a third model rather than being resolved by
+            # `any()` — which previously let every pair through and flooded
+            # conflict detection with non-conflicts.
+            pair.comparable = _break_tie(router, pair, contract, body)
     return pairs
+
+
+TIEBREAK_SYSTEM = """Two independent assessors disagreed about whether these two \
+research findings are COMMENSURABLE - whether comparing them is legitimate at all.
+
+Read both arguments and rule. You are not deciding whether the findings agree; \
+you are deciding whether they measure the same thing closely enough that \
+agreement or disagreement would be meaningful.
+
+Be strict. Two findings that share a topic but measure different constructs - \
+an employment count versus a price pass-through rate, an infection incidence \
+versus a symptom duration - are NOT commensurable, and treating them as such \
+manufactures a contradiction that does not exist."""
+
+
+def _break_tie(router: Router, pair: ClaimPair, contract: str, body: str) -> bool:
+    """Third lineage resolves a genuine split."""
+    args = "\n\n".join(
+        f"ASSESSOR {a['side'].upper()} [{a['lineage']}] "
+        f"comparable={a.get('comparable')} ({a.get('reason_code')}):\n"
+        f"  {a.get('argument', '')}" for a in pair.assessments)
+    try:
+        res = router.complete(
+            Role.ADJUDICATION,
+            [{"role": "system", "content": f"{contract}\n\n{TIEBREAK_SYSTEM}"},
+             {"role": "user", "content": f"{body}\n\nASSESSOR ARGUMENTS\n\n{args}\n\nRule."}],
+            COMMENSURABILITY_SCHEMA, stage="commensurability_tiebreak",
+            subject_id=pair.id)
+    except Exception:
+        # Cannot resolve the split, so do not assert a conflict on it.
+        return False
+    return bool(res.data.get("comparable"))
 
 
 # --- stage 2: conflicts -------------------------------------------------------
