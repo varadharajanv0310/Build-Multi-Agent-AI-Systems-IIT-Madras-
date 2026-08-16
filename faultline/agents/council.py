@@ -182,7 +182,7 @@ def candidate_pairs(claims: list[dict], max_pairs: int = 60) -> list[ClaimPair]:
     contradict each other in the sense we care about, and two findings pointing
     the same direction are not a conflict candidate.
     """
-    pairs: list[ClaimPair] = []
+    scored: list[tuple[float, dict, dict]] = []
     for a, b in itertools.combinations(claims, 2):
         if a["paper_id"] == b["paper_id"]:
             continue
@@ -191,11 +191,51 @@ def candidate_pairs(claims: list[dict], max_pairs: int = 60) -> list[ClaimPair]:
         # agreeing is a corroboration edge, handled elsewhere.
         if da == db:
             continue
-        if {da, db} <= {"positive", "negative", "null", "mixed"}:
-            pairs.append(ClaimPair(a=a, b=b))
-        if len(pairs) >= max_pairs:
-            break
-    return pairs
+        if not {da, db} <= {"positive", "negative", "null", "mixed"}:
+            continue
+        scored.append((_pair_affinity(a, b), a, b))
+
+    # Rank rather than truncate. An earlier version took the first max_pairs in
+    # combination order, which spends the whole budget on pairs involving
+    # whichever claim happened to be first. On a 46-claim corpus that is 24 of
+    # ~1000 possible pairs, chosen by list position — and it found nothing,
+    # because commensurability hinges on the two claims sharing an endpoint.
+    scored.sort(key=lambda t: -t[0])
+    return [ClaimPair(a=a, b=b) for _, a, b in scored[:max_pairs]]
+
+
+_ENDPOINT_NOISE = {"of", "the", "in", "and", "or", "a", "an", "at", "to", "for",
+                   "rate", "risk", "number", "total", "per", "with", "by"}
+
+
+def _tokens(value: object) -> set[str]:
+    text = "" if value is None else str(value).lower()
+    return {t for t in "".join(ch if ch.isalnum() else " " for ch in text).split()
+            if len(t) > 2 and t not in _ENDPOINT_NOISE}
+
+
+def _pair_affinity(a: dict, b: dict) -> float:
+    """How likely two claims are to be genuinely comparable.
+
+    Weighted toward the outcome measure because that is what commensurability
+    actually turns on: on the omega-3 corpus, 59 of 87 rejections were
+    'different_outcome_measure' — atrial fibrillation against total stroke.
+    Comparing an endpoint to a different endpoint is a category error, so the
+    scarce assessment budget should go to pairs that share one.
+    """
+    outcome = _jaccard(_tokens(a.get("outcome_measure")), _tokens(b.get("outcome_measure")))
+    population = _jaccard(_tokens(a.get("population")), _tokens(b.get("population")))
+    text = _jaccard(_tokens(a.get("text")), _tokens(b.get("text")))
+    # A definite result against a null one is the most informative shape of
+    # disagreement, so nudge those up.
+    informative = 0.1 if "null" in (a.get("direction"), b.get("direction")) else 0.0
+    return 3.0 * outcome + 1.0 * population + 0.5 * text + informative
+
+
+def _jaccard(x: set[str], y: set[str]) -> float:
+    if not x or not y:
+        return 0.0
+    return len(x & y) / len(x | y)
 
 
 def assess_commensurability(
