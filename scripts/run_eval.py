@@ -32,7 +32,7 @@ def main() -> int:
     ap.add_argument("--field", default=None)
     ap.add_argument("--per-query", type=int, default=10)
     ap.add_argument("--max-conflicts", type=int, default=5)
-    ap.add_argument("--out", default="runs/eval_results.json")
+    ap.add_argument("--out", default="evaluation/results.json")
     args = ap.parse_args()
 
     cases = CASES
