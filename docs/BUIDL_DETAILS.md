@@ -135,19 +135,6 @@ free tiers. Screening issues one model call per retrieved paper, and running
 that volume locally is exactly what makes a full run cost nothing.
 
 
-KNOWN LIMITS
-
-Stated because a tool that hides these is not one you should trust.
-
-Retrieval recall is the weak point — citation snowballing is not implemented,
-so the corpus is whatever four databases return for the generated queries.
-
-Extraction is abstract-first. Full-text acquisition is not built.
-
-Hosted-only deployment degrades, because screening volume meets free-tier
-limits. The design pays off locally.
-
-
 THE LIVE DEMO
 
 https://faultline-6hlo.onrender.com/
