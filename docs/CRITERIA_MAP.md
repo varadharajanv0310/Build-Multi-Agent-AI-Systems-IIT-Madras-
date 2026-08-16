@@ -53,7 +53,7 @@ WORKING DEMO — 20%
 
   Deployed and live: https://faultline-6hlo.onrender.com/
   A three-page web application, not a CLI with printed output.
-  Two recorded runs replayable in the browser, labelled on screen with their
+  Two recorded runs you can open and explore in the browser, labelled with their
   original run ids and dates.
   A 2:42 demo video with captions.
   Every model call traced in SQLite and replayable.

@@ -139,8 +139,8 @@ THE LIVE DEMO
 
 https://faultline-6hlo.onrender.com/
 
-The public instance replays two recorded runs, labelled on screen with their
-original run ids and dates. Live submission is disabled there on purpose: a
+The public instance serves two recorded runs as result pages you can scroll
+and click through, labelled on screen with their original run ids and dates. Live submission is disabled there on purpose: a
 public URL runs on our API keys, and a rate-limited key would break the demo
 for the people it was published for. Clone the repo to do a real run.
 
