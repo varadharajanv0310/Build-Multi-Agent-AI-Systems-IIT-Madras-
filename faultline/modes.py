@@ -9,6 +9,7 @@ findings at the end.
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -66,7 +67,7 @@ def _gather(router, store, run_id, question, *, per_query, from_year,
         router, store, run_id, papers, criteria_text(spec), report)
     log(f"{len(included)} relevant, {len(borderline)} borderline")
 
-    targets = (included + borderline)[:12]
+    targets = (included + borderline)[:6]
     log(f"Extracting findings from {len(targets)} papers…")
     claims = extract_claims(router, store, run_id, targets, question)
     usable = [c for c in claims if usable_for_conflict(c)]
@@ -89,7 +90,8 @@ class ReviewResult:
 
 
 def review_paper(source: str, *, per_query: int = 8, from_year: int = 2000,
-                 max_papers: int = 24, store: Store | None = None,
+                 max_papers: int = 15, budget_seconds: float = 420,
+                 store: Store | None = None,
                  log: Log = print) -> ReviewResult:
     store = store or Store()
     ledger = Ledger()
@@ -103,7 +105,8 @@ def review_paper(source: str, *, per_query: int = 8, from_year: int = 2000,
     run_id = store.start_run(mode="paper", paper_ref=paper.id,
                              config={r.value: f"{s.provider}/{s.model_id}"
                                      for r, s in ROSTER.items()})
-    router = Router(store, run_id, ledger)
+    router = Router(store, run_id, ledger,
+                    deadline=time.monotonic() + budget_seconds)
     res = ReviewResult(run_id=run_id, paper=paper, ledger=ledger)
     res.review.paper_title = paper.title or "your paper"
 
@@ -169,14 +172,16 @@ class AnswerResult:
 
 
 def answer_question(question: str, *, per_query: int = 10, from_year: int = 2000,
-                    max_papers: int = 30, store: Store | None = None,
+                    max_papers: int = 20, budget_seconds: float = 420,
+                    store: Store | None = None,
                     log: Log = print) -> AnswerResult:
     store = store or Store()
     ledger = Ledger()
     run_id = store.start_run(mode="question", question=question,
                              config={r.value: f"{s.provider}/{s.model_id}"
                                      for r, s in ROSTER.items()})
-    router = Router(store, run_id, ledger)
+    router = Router(store, run_id, ledger,
+                    deadline=time.monotonic() + budget_seconds)
     res = AnswerResult(run_id=run_id, ledger=ledger)
 
     try:

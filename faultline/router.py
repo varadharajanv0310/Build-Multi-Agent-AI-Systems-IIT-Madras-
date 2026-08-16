@@ -22,6 +22,12 @@ from faultline.providers.openai_compat import GroqProvider, OpenRouterProvider
 from faultline.store.db import Store, cache_key
 
 
+class DeadlineExceeded(ProviderError):
+    """The run's wall-clock budget is spent. Callers return what they have
+    rather than continuing — a partial answer now beats a complete one in an
+    hour that nobody waited for."""
+
+
 class AllModelsFailed(ProviderError):
     """Primary and every failover exhausted. The caller decides whether to
     abstain — which, for this system, is a legitimate and common outcome."""
@@ -29,13 +35,22 @@ class AllModelsFailed(ProviderError):
 
 class Router:
     def __init__(self, store: Store, run_id: str, ledger: Ledger | None = None,
-                 use_cache: bool = True, max_retries: int = 2):
+                 use_cache: bool = True, max_retries: int = 2,
+                 deadline: float | None = None):
         self.store = store
         self.run_id = run_id
         self.ledger = ledger or Ledger()
         self.use_cache = use_cache
         self.max_retries = max_retries
+        # Wall-clock budget for the whole run. Without one, a degraded path
+        # that falls back to local models on every call has no upper bound —
+        # observed running for hours instead of minutes.
+        self.deadline = deadline
         self._providers: dict[str, Provider] = {}
+
+    @property
+    def out_of_time(self) -> bool:
+        return self.deadline is not None and time.monotonic() > self.deadline
 
     # --- provider registry ---------------------------------------------------
 
@@ -63,6 +78,9 @@ class Router:
         subject_id: str | None = None,
         max_tokens: int | None = None,
     ) -> CompletionResult:
+        if self.out_of_time:
+            raise DeadlineExceeded(f"run deadline reached before {role.value}")
+
         chain: list[ModelSpec] = [ROSTER[role], *FAILOVER.get(role, [])]
         last_error: Exception | None = None
 
@@ -209,6 +227,8 @@ class Router:
         """
         out: dict[str, CompletionResult] = {}
         for subject_id, messages in items:
+            if self.out_of_time:
+                break
             try:
                 out[subject_id] = self.complete(
                     role, messages, schema, stage=stage, subject_id=subject_id)

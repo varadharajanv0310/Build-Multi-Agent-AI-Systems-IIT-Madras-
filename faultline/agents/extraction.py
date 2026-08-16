@@ -112,7 +112,7 @@ def extract_claims(
     papers: list[Paper],
     question: str,
     max_chars: int = 9000,
-    chunks_per_paper: int = 3,
+    chunks_per_paper: int = 2,
 ) -> list[dict]:
     """Extract qualified claims from each paper relevant to the question."""
     items = []

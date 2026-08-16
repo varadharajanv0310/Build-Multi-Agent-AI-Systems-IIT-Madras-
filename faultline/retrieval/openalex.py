@@ -18,6 +18,10 @@ from faultline.retrieval.models import Paper
 BASE = "https://api.openalex.org"
 
 
+class RateLimited(RuntimeError):
+    """Quota is spent for the day. Not retryable — fall back to another source."""
+
+
 def reconstruct_abstract(inverted: dict[str, list[int]] | None) -> str | None:
     """OpenAlex ships abstracts as an inverted index for licensing reasons.
 
@@ -69,6 +73,9 @@ class OpenAlexClient:
         # which cost a corpus rather than a request.
         self._min_interval = min_interval
         self._last_request = 0.0
+        # Once the daily budget is gone it is gone. Re-checking on every
+        # query wastes a round-trip each time.
+        self._exhausted = False
         self._client = httpx.Client(
             timeout=timeout,
             headers={"User-Agent": SETTINGS.user_agent, "Accept": "application/json"},
@@ -78,6 +85,8 @@ class OpenAlexClient:
         self._mailto = SETTINGS.polite_pool_email or None
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        if self._exhausted:
+            raise RateLimited('OpenAlex daily credit already exhausted this run')
         if self._mailto:
             params = {**params, "mailto": self._mailto}
 
@@ -100,9 +109,19 @@ class OpenAlexClient:
                 continue
 
             if r.status_code == 429:
-                # Honour Retry-After when given; otherwise back off hard. A 429
-                # is a real signal to slow down, not a transient blip.
-                wait = float(r.headers.get("Retry-After") or 0) or min(2 ** (attempt + 2), 30)
+                retry_after = float(r.headers.get("Retry-After") or 0)
+                # OpenAlex meters by daily credit, and an exhausted budget
+                # returns Retry-After in HOURS (observed: 57036 seconds).
+                # Retrying that is not backoff, it is waiting until tomorrow —
+                # and sleeping through it burned ~150s per search before
+                # anything fell through to the keyless sources. Give up
+                # immediately so the caller can use Crossref or Europe PMC.
+                if retry_after > 60:
+                    self._exhausted = True
+                    raise RateLimited(
+                        f"OpenAlex daily credit exhausted; resets in "
+                        f"{retry_after / 3600:.1f}h")
+                wait = retry_after or min(2 ** attempt, 8)
                 last = RuntimeError(f"rate limited (429), waited {wait:.0f}s")
                 time.sleep(wait)
                 continue

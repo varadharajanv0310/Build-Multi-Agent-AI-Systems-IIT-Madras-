@@ -81,9 +81,15 @@ ROSTER: dict[Role, ModelSpec] = {
     Role.QUERY_EXPANSION: ModelSpec(
         "ollama", "qwen3:8b", Lineage.QWEN,
         native_schema=True, think=False, max_output_tokens=512, metered=False),
+    # qwen3:8b rather than the stronger gpt-oss:20b, and the reason is VRAM
+    # rather than quality. Screening and every local fallback already run on
+    # qwen3:8b; putting extraction on a 13GB model means Ollama evicts and
+    # reloads weights between stages, which is what turned a 90-second review
+    # into an hours-long one. One resident model beats a better model that has
+    # to be paged in and out.
     Role.EXTRACTION: ModelSpec(
-        "ollama", "gpt-oss:20b", Lineage.GPT_OSS,
-        native_schema=True, think="low", max_output_tokens=2048, metered=False),
+        "ollama", "qwen3:8b", Lineage.QWEN,
+        native_schema=True, think=False, max_output_tokens=1500, metered=False),
 
     # Opposed lineages by construction. Local Mistral vs hosted Llama — if both
     # sides ran the same base model they would agree for the wrong reason.
@@ -122,17 +128,20 @@ ROSTER: dict[Role, ModelSpec] = {
         native_schema=True, max_output_tokens=2048),
 }
 
-# Local models, unmetered and always available. These terminate every failover
-# chain: hosted free tiers all exhaust on the same day, so a chain made only of
-# hosted models fails as a unit — which is exactly what happened when Groq and
-# OpenRouter rate-limited within seconds of each other and killed a whole review.
-# A degraded local answer beats no answer.
-_LOCAL_BIG = ModelSpec("ollama", "gpt-oss:20b", Lineage.GPT_OSS,
-                       native_schema=True, think="low",
-                       max_output_tokens=2048, metered=False)
-_LOCAL_MID = ModelSpec("ollama", "qwen3:8b", Lineage.QWEN,
-                       native_schema=True, think=False,
-                       max_output_tokens=1024, metered=False)
+# ONE local fallback model, used by every role. Unmetered and always available,
+# so a chain of hosted-only models can never fail as a unit the way Groq and
+# OpenRouter did when both rate-limited within seconds of each other.
+#
+# It must be a SINGLE model. gpt-oss:20b (13GB) and qwen3:8b (5.2GB) cannot
+# co-reside in the 5080's ~14GB of free VRAM, so alternating between them makes
+# Ollama evict and reload 13GB of weights on every switch. A first attempt at
+# this used both and turned a 90-second review into one that ran for hours.
+# qwen3:8b is the choice because it is small enough to stay resident.
+_LOCAL = ModelSpec("ollama", "qwen3:8b", Lineage.QWEN,
+                   native_schema=True, think=False,
+                   max_output_tokens=1500, metered=False)
+_LOCAL_BIG = _LOCAL
+_LOCAL_MID = _LOCAL
 
 # Tried in order when a role's primary model is rate-limited or erroring.
 # Deliberately crosses providers: a Groq outage must not stall the council.
