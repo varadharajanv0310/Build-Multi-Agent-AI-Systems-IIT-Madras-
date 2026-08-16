@@ -42,7 +42,19 @@ class Store:
         self.conn = sqlite3.connect(self.path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Add columns that CREATE TABLE IF NOT EXISTS will not add to an
+        existing database. Cheap, idempotent, and keeps older run history
+        readable instead of forcing the db to be deleted."""
+        for table, column, decl in (("claims", "source_title", "TEXT"),):
+            have = {r["name"] for r in
+                    self.conn.execute(f"PRAGMA table_info({table})")}
+            if column not in have:
+                self.conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
     # --- runs ----------------------------------------------------------------
 

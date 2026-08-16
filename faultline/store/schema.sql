@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS claims (
     id                TEXT PRIMARY KEY,
     run_id            TEXT NOT NULL REFERENCES runs(id),
     paper_id          TEXT NOT NULL,
+    source_title      TEXT,                -- carried so a claim can name its paper
     text              TEXT NOT NULL,
     claim_type        TEXT,               -- numeric | empirical | methodological | definitional
     citation_function TEXT,               -- support | contrast | background | method_use

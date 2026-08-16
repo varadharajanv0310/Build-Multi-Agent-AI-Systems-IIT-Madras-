@@ -116,6 +116,9 @@ def extract_claims(
 ) -> list[dict]:
     """Extract qualified claims from each paper relevant to the question."""
     items = []
+    # A claim without its source is an assertion. Carry the title through so
+    # every finding can be shown next to the paper that made it.
+    titles = {p.id: (p.title or "") for p in papers}
     for p in papers:
         body = (p.fulltext or p.abstract or "").strip()
         if not body:
@@ -150,6 +153,7 @@ def extract_claims(
                 "id": new_id("clm"),
                 "run_id": run_id,
                 "paper_id": paper_id,
+                "source_title": titles.get(paper_id, ""),
                 "text": c.get("text", "")[:2000],
                 "claim_type": c.get("claim_type"),
                 "citation_function": c.get("citation_function"),
