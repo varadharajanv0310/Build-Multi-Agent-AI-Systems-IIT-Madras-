@@ -10,6 +10,7 @@ worthless before submission, because the actual referee will not be kind.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from faultline.config import Role
@@ -209,9 +210,19 @@ def _clean_objection(raw: object) -> str:
     that is not an objection and showing it makes the whole panel look broken.
     """
     text = " ".join(str(raw or "").split())
-    for label in _FIELD_LABELS:
-        if text.lower().startswith(label + ":"):
-            text = text[len(label) + 1:].strip()
+    # Leakage arrives in two shapes: a bare label ("severity:") and a fragment
+    # of the JSON the model was meant to emit ('objection": "Claim [5] ...').
+    # Both prefixes are stripped, repeatedly, since one can follow the other.
+    for _ in range(3):
+        before = text
+        text = re.sub(r'^\s*["\']?(' + "|".join(_FIELD_LABELS) + r')["\']?\s*:\s*["\']?',
+                      "", text, flags=re.I)
+        text = text.strip()
+        if text == before:
+            break
+    # An unmatched trailing quote left behind by that fragment.
+    if text.endswith('"') and text.count('"') % 2 == 1:
+        text = text[:-1].rstrip()
     # Anything that is only a label, or too short to be a claim about the
     # paper, is an artefact rather than a finding.
     if len(text) < 25 or text.rstrip(":").lower() in _FIELD_LABELS:

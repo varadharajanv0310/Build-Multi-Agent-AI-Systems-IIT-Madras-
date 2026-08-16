@@ -35,3 +35,6 @@ Thumbs.db
 
 # Generated reports
 reports/
+
+# Demo capture output — large binaries, regenerable
+demo/recording/

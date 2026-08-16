@@ -1,0 +1,25 @@
+Every researcher has the same problem before they submit. You have read your own paper forty times, and you can no longer see it. The referee can. Faultline is built for the ninety seconds before you click submit.
+
+It does two jobs on one engine. Ask it a question, and it answers from the literature. Or hand it your draft, and it reviews it.
+
+Here is the second one, on a real paper. This is SEVA, a detector for corpus poisoning in retrieval-augmented generation, being prepared for IEEE Transactions on Dependable and Secure Computing after eight months of work. It has never been submitted. Nobody has refereed it yet.
+
+Watch what happens. It reads the paper — ten thousand, eight hundred words — and pulls out nine empirical claims, each with its direction, its population, and the conditions the author attached to it. Then it identifies the field on its own: adversarial machine learning, data poisoning detection for retrieval-augmented generation. Nobody told it that.
+
+Then the part that matters. Three reviewers, each attacking a different axis. One goes at the framing. One goes at the method. One goes at whether the work is significant. And critically, each one runs on a different model family — a Llama, a DeepSeek, a Llama 4. Three prompts on one model gives you three flavours of the same blind spot. Three different lineages actually disagree about what matters, which is what a real review panel does.
+
+They raised six major objections. Not generic ones.
+
+The method reviewer went straight at the headline number: the paper reports zero percent poison evasion with a ninety-five percent Wilson upper bound, and the reviewer asked what the base rate was — because without it, that bound does not mean what it appears to mean.
+
+Another called out circular reasoning: the gate prevents all the corruption it detects, which is close to true by construction.
+
+And the sharpest one questions the paper's own title. SEVA claims to be LLM-free. But it depends on pretrained embedding models — bge, e5, gte. A referee can argue that is external model dependence wearing a different name. That objection is worth finding now, not in a reviewer response four months from now.
+
+Every objection ships with the minimum change that would neutralise it. Not "improve the evaluation" — the specific thing to do.
+
+Notice what it did not do. It found no supporting literature for this paper, and it says so, in the interface, in plain numbers. The evidence base is marked thin, because corpus-poisoning defence is a genuinely new field with almost no independent replication. A tool that invented four plausible-sounding citations here would be more impressive and completely useless. Every claim it shows traces back to a specific paper, or it does not appear.
+
+That whole run took one hundred and thirteen seconds. Thirty-four model calls. Eighty-two percent of them ran locally on one consumer GPU. Total cost: zero dollars.
+
+Faultline. It reviews the paper you are too close to read.

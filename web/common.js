@@ -57,6 +57,9 @@ function runPoller({ typicalStages, onResult, onError }) {
     const clock = $("runClock");
     if (clock) clock.textContent = `RUNNING — ${String(job.elapsed).padStart(2, "0")}S / ~90S`;
 
+    // A recorded run is labelled as one, on screen, for as long as it plays.
+    if (job.replay) markReplay(job.replay);
+
     $("stageList").innerHTML = job.stages.map((s, i) => {
       const active = i === job.stages.length - 1 && job.phase === "running";
       return `<div class="row${active ? " active" : ""}">
@@ -95,6 +98,21 @@ function runPoller({ typicalStages, onResult, onError }) {
     stop,
     get jobId() { return jobId; },
   };
+}
+
+/* Recorded demos replay a real run at its recorded timings. The badge stays on
+   screen for the whole replay so nobody watching can mistake it for a live
+   computation — the data is real, the clock is not. */
+function markReplay(replay) {
+  if ($("replayChip")) return;
+  const when = (replay.recordedAt || "").slice(0, 10);
+  const chip = document.createElement("div");
+  chip.id = "replayChip";
+  chip.className = "replay-chip";
+  chip.innerHTML = `<span class="dot"></span>REPLAY OF A RECORDED RUN`
+    + (when ? ` · ${esc(when)}` : "")
+    + (replay.runId ? ` · ${esc(replay.runId)}` : "");
+  document.body.appendChild(chip);
 }
 
 function failInto(id, message) {

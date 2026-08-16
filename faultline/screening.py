@@ -88,6 +88,26 @@ def _prompt(paper: Paper, criteria: str) -> list[dict[str, str]]:
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": body}]
 
 
+# Phrases that assert the paper DOES bear on the question. A reason opening
+# with one of these is an inclusion argument regardless of the decision field.
+_AFFIRMS = (
+    "reports new empirical", "reports empirical", "presents new empirical",
+    "directly addresses", "directly relevant", "is directly on",
+    "bears directly on", "reports results on", "provides empirical evidence",
+)
+# ...unless the sentence turns. "reports new empirical results, but does not
+# address the question" is a genuine exclusion and must stay excluded.
+_NEGATES = (" but ", " however", " although", " though ", " does not",
+            " not directly", " unrelated", " no empirical", " rather than")
+
+
+def _reason_affirms_relevance(reason: str) -> bool:
+    low = f" {reason.lower().strip()} "
+    if not any(a in low for a in _AFFIRMS):
+        return False
+    return not any(n in low for n in _NEGATES)
+
+
 def screen_corpus(
     router: Router,
     store: Store,
@@ -132,6 +152,15 @@ def screen_corpus(
             )
         if d.decision not in ("include", "exclude", "borderline"):
             d.decision = "borderline"
+        if d.decision == "exclude" and _reason_affirms_relevance(d.reason):
+            # The screener wrote an INCLUDING reason and stamped exclude on it:
+            # one real case read "reports new empirical results on detection of
+            # templated corpus poisoning in RAG systems" — verbatim what the
+            # criteria asked for — and was excluded anyway. Given this stage is
+            # recall-biased by design, the reason wins and the paper survives
+            # to borderline rather than being silently dropped.
+            d.decision = "borderline"
+            d.reason = f"[kept: reason contradicts exclusion] {d.reason}"[:500]
 
         decisions.append(d)
         if d.decision == "include":

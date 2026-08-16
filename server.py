@@ -8,11 +8,11 @@ Nothing here contains analysis logic — it adapts faultline.modes to JSON.
 """
 from __future__ import annotations
 
+import json
 import threading
 import time
 import traceback
 import uuid
-from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from faultline import modes
 from faultline.config import PROJECT_ROOT, ROSTER, lineages_in_play
+from faultline.payload import answer_payload, clean, review_payload
 from faultline.store.db import Store
 
 WEB = PROJECT_ROOT / "web"
@@ -93,127 +94,6 @@ def _run(job_id: str, fn, *args, **kwargs) -> None:
             _jobs[job_id]["phase"] = "error"
 
 
-# --- serialisation ------------------------------------------------------------
-
-def _clean(value: Any) -> Any:
-    if is_dataclass(value) and not isinstance(value, type):
-        return {k: _clean(v) for k, v in asdict(value).items()}
-    if isinstance(value, dict):
-        return {k: _clean(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_clean(v) for v in value]
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return str(value)
-
-
-def _review_payload(res) -> dict[str, Any]:
-    rv = res.review
-    groups: list[dict[str, Any]] = []
-    for name, label in (("R1 — framing", "Framing"),
-                        ("R2 — method", "Method"),
-                        ("R3 — significance", "Significance")):
-        items = [o for o in rv.objections if o.reviewer == name]
-        if not items:
-            continue
-        groups.append({
-            "name": label,
-            "lineage": items[0].lineage,
-            "objections": [{"severity": o.severity.upper(),
-                            "text": o.objection,
-                            "fix": o.minimum_fix} for o in items],
-        })
-
-    pos = rv.positioning or {}
-    ap = rv.appraisal or {}
-    ledger = res.ledger.summary() if res.ledger else {}
-    words = len((res.paper.fulltext or res.paper.abstract or "").split()) if res.paper else 0
-
-    return {
-        "kind": "review",
-        "paper": {
-            "title": rv.paper_title,
-            "meta": f"READ FROM YOUR DOCUMENT · {words:,} WORDS" if words else "",
-        },
-        "counts": [
-            {"n": len(rv.claims), "label": "YOUR CLAIMS FOUND", "accent": False},
-            {"n": len(rv.literature), "label": "LITERATURE FINDINGS", "accent": False},
-            {"n": len(rv.fatal), "label": "FATAL OBJECTIONS", "accent": bool(rv.fatal)},
-            {"n": len(rv.major), "label": "MAJOR OBJECTIONS", "accent": False},
-        ],
-        "fatalAlert": rv.fatal[0].objection if rv.fatal else "",
-        "novelty": {
-            "verdict": str(pos.get("novelty_risk", "unclear")).replace("_", " ").upper(),
-            "placement": pos.get("placement", ""),
-            "draftSentence": pos.get("novelty_claim", ""),
-            "dismissalRisk": pos.get("collapse_risk", ""),
-            "mustCite": [{"title": str(m), "why": ""} for m in (pos.get("must_cite") or [])],
-        },
-        "panel": groups,
-        "base": {
-            "quality": str(ap.get("evidence_base", "unknown")).upper(),
-            "assessment": ap.get("assessment", ""),
-            "systemic": [{"text": str(s)} for s in (ap.get("systemic_issues") or [])],
-            "construct": ap.get("construct_validity", ""),
-        },
-        "claims": [{
-            "n": f"{i:02d}",
-            "text": c.get("text", ""),
-            "direction": c.get("direction", ""),
-            "population": c.get("population", ""),
-            "scope": ", ".join(c.get("scope_conditions_json") or [])
-                     if isinstance(c.get("scope_conditions_json"), list)
-                     else str(c.get("scope_conditions_json") or ""),
-        } for i, c in enumerate(rv.claims, 1)],
-        "run": {
-            "modelCalls": ledger.get("total_calls", 0),
-            "localShare": ledger.get("local_share", 0),
-            "cost": "$0.00",
-        },
-        "degraded": res.degraded,
-        "error": res.error,
-        "runId": res.run_id,
-    }
-
-
-def _answer_payload(res) -> dict[str, Any]:
-    a = res.answer
-    ledger = res.ledger.summary() if res.ledger else {}
-    r = res.report
-    return {
-        "kind": "answer",
-        "question": a.question if a else "",
-        "headline": a.headline if a else "",
-        "answer": a.answer if a else "",
-        "confidence": (a.confidence if a else "insufficient_evidence").replace("_", " "),
-        "consensus": (a.consensus if a else "no_consensus").replace("_", " "),
-        "caveats": a.caveats if a else [],
-        "disagreements": a.disagreements if a else [],
-        "whatWouldSettleIt": a.what_would_settle_it if a else [],
-        "evidence": [{
-            "text": c.get("text", ""),
-            "direction": c.get("direction", ""),
-            "magnitude": c.get("magnitude", ""),
-            "population": c.get("population", ""),
-            "outcome": c.get("outcome_measure", ""),
-            "source": c.get("source_title") or c.get("paper_title") or "",
-        } for c in (a.evidence if a else [])],
-        "corpus": {
-            "databases": r.databases,
-            "raw": r.raw_hits, "unique": r.after_dedup, "screened": r.screened,
-            "included": r.included, "borderline": r.borderline, "excluded": r.excluded,
-            "field": res.calibration.get("field", ""),
-        },
-        "run": {
-            "modelCalls": ledger.get("total_calls", 0),
-            "localShare": ledger.get("local_share", 0),
-            "cost": "$0.00",
-        },
-        "error": res.error,
-        "runId": res.run_id,
-    }
-
-
 # --- API ----------------------------------------------------------------------
 
 @app.post("/api/review")
@@ -270,14 +150,111 @@ def job_status(job_id: str):
             "title": job["title"], "stages": list(job["stages"]),
             "warning": job["warning"], "error": job["error"],
             "elapsed": round(time.time() - job["started"]),
+            "replay": job.get("replay"),
             "result": None,
         }
         result = job["result"]
+        kind = job["kind"]
     if result is not None:
-        payload["result"] = _clean(
-            _review_payload(result) if job["kind"] == "review"
-            else _answer_payload(result))
+        # A replayed run is already the recorded payload; only a live run holds
+        # dataclasses that still need mapping.
+        payload["result"] = result if isinstance(result, dict) else clean(
+            review_payload(result) if kind == "review" else answer_payload(result))
     return JSONResponse(payload)
+
+
+# --- recorded demos -----------------------------------------------------------
+#
+# A live run needs three hosted providers and four databases to cooperate for
+# 90-150 seconds. During a recording that is three ways to lose the take, so a
+# real run is captured once by scripts/record_demo.py and replayed at its
+# recorded timings. It is a replay of real output, never a fabricated one, and
+# the UI says so — see the REPLAY chip and the recorded run id.
+
+DEMOS = PROJECT_ROOT / "demo"
+
+
+def _load_demo(name: str) -> dict:
+    path = (DEMOS / f"{name}.json").resolve()
+    if path.parent != DEMOS.resolve() or not path.is_file():
+        raise HTTPException(404, "no such demo")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _replay(job_id: str, record: dict, speed: float) -> None:
+    """Emit the recorded stages on their recorded schedule."""
+    try:
+        for stage in record["stages"]:
+            target = float(stage["at"]) / speed
+            with _lock:
+                job = _jobs.get(job_id)
+                if job is None:
+                    return
+                delay = target - (time.time() - job["started"])
+            if delay > 0:
+                time.sleep(delay)
+            with _lock:
+                job = _jobs.get(job_id)
+                if job is None:
+                    return
+                job["stages"].append({"label": stage["label"],
+                                      "at": round(float(stage["at"]))})
+                if record.get("warning") and not job["warning"]:
+                    # The banner appeared partway through the real run; hold it
+                    # until retrieval has actually been reached.
+                    if "search" in stage["label"].lower() or len(job["stages"]) >= 4:
+                        job["warning"] = record["warning"]
+        tail = float(record.get("elapsed", 0)) / speed
+        with _lock:
+            job = _jobs.get(job_id)
+            remaining = tail - (time.time() - job["started"]) if job else 0
+        if remaining > 0:
+            time.sleep(remaining)
+        with _lock:
+            if job_id in _jobs:
+                _jobs[job_id]["result"] = record["result"]
+                _jobs[job_id]["phase"] = "result"
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        with _lock:
+            if job_id in _jobs:
+                _jobs[job_id]["error"] = f"{type(e).__name__}: {e}"
+                _jobs[job_id]["phase"] = "error"
+
+
+@app.get("/api/demo")
+def list_demos():
+    if not DEMOS.is_dir():
+        return []
+    out = []
+    for p in sorted(DEMOS.glob("*.json")):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — a broken file should not hide the rest
+            continue
+        out.append({"name": d.get("name", p.stem), "kind": d.get("kind", ""),
+                    "label": d.get("label", ""), "subject": d.get("subject", ""),
+                    "recordedAt": d.get("recordedAt", ""),
+                    "elapsed": d.get("elapsed", 0), "runId": d.get("runId", "")})
+    return out
+
+
+@app.post("/api/demo/{name}")
+def start_demo(name: str, speed: float = 1.0):
+    record = _load_demo(name)
+    speed = min(max(speed, 0.25), 20.0)
+    job_id = _new_job("review" if record["kind"] == "review" else "answer",
+                      record.get("label", ""))
+    with _lock:
+        # Marks the job as a replay so the page can label it honestly.
+        _jobs[job_id]["replay"] = {
+            "recordedAt": record.get("recordedAt", ""),
+            "runId": record.get("runId", ""),
+            "originalElapsed": record.get("elapsed", 0),
+        }
+    threading.Thread(target=_replay, daemon=True,
+                     args=(job_id, record, speed)).start()
+    return {"jobId": job_id}
 
 
 @app.get("/api/status")

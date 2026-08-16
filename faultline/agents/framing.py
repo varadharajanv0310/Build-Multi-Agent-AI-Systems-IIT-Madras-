@@ -100,11 +100,24 @@ to find where the literature DISAGREES WITH ITSELF. Narrow criteria \
 manufacture consensus, because the studies that would have contradicted each \
 other get excluded before anyone compares them.
 
-So include studies that vary in population, dose or intensity, setting, \
-follow-up length, and outcome variant, as long as they bear on the same \
-underlying question. Those variations are not noise to be filtered out - they \
-are the candidate EXPLANATIONS for why findings conflict, and removing them \
-destroys the analysis.
+So include studies that vary along whatever axes this field varies on - \
+population, dose, setting and follow-up in a clinical field; dataset, \
+architecture, threat model, benchmark and metric in a computational one - as \
+long as they bear on the same underlying question. Those variations are not \
+noise to be filtered out - they are the candidate EXPLANATIONS for why \
+findings conflict, and removing them destroys the analysis.
+
+Write criteria for the SURROUNDING LITERATURE, not for this paper's exact \
+contribution. Criteria naming the specific mechanism, system or variant under \
+study match almost nothing, because the one paper doing exactly that is the \
+paper being reviewed. Admit the work a referee would expect to see cited: the \
+problem being addressed, competing approaches to it, the baselines and attacks \
+compared against, and the adjacent variants of the same task. A defence against \
+one attack variant belongs in a review of a different variant.
+
+Do not restrict criteria by empirical method. "Empirical result" means a \
+measurement of any kind - a trial, a benchmark, an evaluation, a simulation, a \
+measured system - not only the study designs of medicine.
 
 Reserve exclusion for studies that are genuinely about a different question, a \
 different intervention, or report no empirical result at all. Do not exclude on \

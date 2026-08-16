@@ -11,6 +11,7 @@ different product — and the one you can point at a draft before you submit it.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -141,17 +142,83 @@ def load_paper(source: str) -> Paper:
         "or paste the abstract text")
 
 
+_SKIP_LINE = ("abstract", "http", "doi:", "arxiv:", "keywords", "index terms",
+              "anonymous author", "manuscript", "preprint", "submitted to",
+              "ieee transactions", "under review", "conference on")
+
+
 def _guess_title(text: str) -> str:
-    """First substantial line of a document is nearly always its title.
+    """The title, which a typesetter will have wrapped across two or three lines.
+
+    Taking only the first line gave "SEVA: Lightweight, LLM-Free Detection of"
+    — a sentence cut mid-phrase, shown as the heading of someone's own paper.
+    Titles are joined until the line stops looking like a continuation.
 
     Showing a user 'faultline_upload' as the title of their own paper is a
     small thing that makes the whole tool feel broken."""
-    for line in (text or "").splitlines():
-        line = " ".join(line.split())
-        if 15 < len(line) < 250 and not line.lower().startswith(
-                ("abstract", "http", "doi:", "arxiv:", "keywords")):
-            return line
-    return ""
+    lines = []
+    for raw in (text or "").splitlines():
+        line = " ".join(raw.split())
+        if not line:
+            if lines:
+                break
+            continue
+        low = line.lower()
+        if low.startswith(_SKIP_LINE):
+            if lines:
+                break
+            continue
+        # A bare page number or figure marker above the title is noise.
+        if len(line) < 15 and not lines:
+            continue
+        if len(line) > 250:
+            break
+        lines.append(line)
+        joined = " ".join(lines)
+        # A title that ends on terminal punctuation, or has run long enough,
+        # is complete. Continuations end mid-phrase ("... Detection of").
+        if len(joined) > 40 and line[-1] not in ",-–—:;" and not _looks_partial(line):
+            break
+        if len(joined) > 220:
+            break
+    return " ".join(lines)[:250]
+
+
+_PARTIAL_TAIL = ("of", "for", "in", "the", "a", "an", "and", "or", "with",
+                 "to", "on", "from", "via", "under", "using", "against")
+
+
+def _looks_partial(line: str) -> bool:
+    """True when a line clearly continues onto the next one."""
+    last = line.rstrip().split()[-1].lower().strip(":,;") if line.split() else ""
+    return last in _PARTIAL_TAIL
+
+
+# PDF text extraction splits letters whose glyphs were kerned apart, so "SEVA"
+# arrives as "SEV A" and appears that way in the title, every extracted claim
+# and every objection quoting it. Repairing it here fixes all of them at once.
+_LIGATURES = {"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl",
+              "ﬃ": "ffi", "ﬄ": "ffl", "‑": "-"}
+
+
+def _repair_pdf_text(text: str) -> str:
+    for bad, good in _LIGATURES.items():
+        text = text.replace(bad, good)
+    # An ALLCAPS name split by kerning ("SEV A") is rejoined only on evidence,
+    # because the bare pattern would turn "NATO A team" into "NATOA". Two
+    # things count as evidence: the joined form appearing elsewhere in the
+    # document, or the same split repeating often enough to be systematic.
+    # A kerned name breaks on every occurrence — 52 times in the paper this
+    # was written for — whereas a real phrase does not repeat identically.
+    counts = Counter(m.group(0) for m in
+                     re.finditer(r"\b([A-Z]{3,}) ([A-Z])\b(?![A-Za-z])", text))
+    for split, n in counts.items():
+        joined = split.replace(" ", "")
+        if n >= 5 or re.search(rf"\b{re.escape(joined)}\b", text, re.I):
+            text = re.sub(rf"\b{re.escape(split)}\b(?![A-Za-z])", joined, text)
+    # Hyphenation across a line break: "detec-\ntion" -> "detection".
+    text = re.sub(r"(\w)-\n(\w)", r"\1\2", text)
+    return text
 
 
 def _read_pdf(path: Path) -> str:
@@ -161,7 +228,8 @@ def _read_pdf(path: Path) -> str:
         raise RuntimeError(
             "PDF input needs pypdf — run: pip install pypdf") from e
     reader = PdfReader(str(path))
-    return "\n".join((p.extract_text() or "") for p in reader.pages)
+    return _repair_pdf_text(
+        "\n".join((p.extract_text() or "") for p in reader.pages))
 
 
 def _from_arxiv(arxiv_id: str) -> Paper:
