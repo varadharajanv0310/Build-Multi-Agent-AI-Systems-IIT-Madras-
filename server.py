@@ -283,10 +283,35 @@ def list_demos():
     return out
 
 
+@app.get("/api/demo/{name}/result")
+def demo_result(name: str):
+    """The finished recording, served whole.
+
+    The timed replay exists for the demo video, where the picture has to match
+    a narration. A visitor wants the opposite: the result on screen, scrollable
+    and clickable, without sitting through a progress animation they cannot
+    control. This hands them the whole thing at once.
+    """
+    record = _load_demo(name)
+    return {
+        "result": record["result"],
+        "stages": record.get("stages", []),
+        "warning": record.get("warning", ""),
+        "replay": {
+            "recordedAt": record.get("recordedAt", ""),
+            "runId": record.get("runId", ""),
+            "originalElapsed": record.get("elapsed", 0),
+        },
+    }
+
+
 @app.post("/api/demo/{name}")
 def start_demo(name: str, speed: float = 1.0):
     record = _load_demo(name)
-    speed = min(max(speed, 0.25), 20.0)
+    # The upper bound has to allow an effectively instant finish: "skip to
+    # result" asks for the whole recording at once, and a 113-second run at the
+    # old 20x cap still made the visitor wait five seconds to skip a wait.
+    speed = min(max(speed, 0.25), 1000.0)
     job_id = _new_job("review" if record["kind"] == "review" else "answer",
                       record.get("label", ""))
     with _lock:

@@ -25,6 +25,7 @@ function setMethod(method) {
 async function submit() {
   const papers = +$("papers").value, year = +$("year").value;
   $("inputError").hidden = true;
+  resetCancel();
   try {
     let res;
     if (state.method === "upload") {
@@ -41,7 +42,13 @@ async function submit() {
       $("runTitle").textContent = state.method === "id" ? source : "Your pasted draft";
       res = await post("/api/review", { source, papers, year });
     }
-    if (!res || !res.jobId) return failInto("inputError", res?.detail || "Could not start the run.");
+    if (!res || !res.jobId) {
+      // Live runs are off on a public instance; offer the recording instead.
+      failInto("inputError", res?.detail || "Could not start the run.");
+      const strip = $("demoStrip");
+      if (strip && !strip.hidden) strip.classList.add("nudge");
+      return;
+    }
     poller.start(res.jobId);
   } catch (e) {
     failInto("inputError", String(e));
@@ -171,7 +178,12 @@ $("papers").oninput = (e) => $("papersOut").textContent = e.target.value;
 $("year").oninput = (e) => $("yearOut").textContent = e.target.value;
 $("pasteText").oninput = (e) => $("charCount").textContent = `${e.target.value.length} characters`;
 $("submitBtn").onclick = submit;
-$("cancelBtn").onclick = () => { poller.stop(); showPhase("input"); };
+function resetCancel() {
+  const b = $("cancelBtn");
+  b.textContent = "RUN IN BACKGROUND";
+  b.onclick = () => { poller.stop(); showPhase("input"); };
+}
+resetCancel();
 
 const dz = $("dropzone");
 $("fileInput").onchange = (e) => {
@@ -196,6 +208,14 @@ for (const b of document.querySelectorAll("#phaseTabs button")) {
     showPhase(b.dataset.phase);
   };
 }
+
+mountDemos({
+  kind: "review",
+  onPlay: (name, title) => openDemo(name, title, (r) => {
+    $("resultBody").innerHTML = reviewHTML(r);
+    wireResult();
+  }),
+});
 
 setMethod("upload");
 showPhase("input");

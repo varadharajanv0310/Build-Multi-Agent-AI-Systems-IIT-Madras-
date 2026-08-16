@@ -20,12 +20,20 @@ async function submit() {
   const question = $("question").value.trim();
   $("inputError").hidden = true;
   if (!question) return failInto("inputError", "Type a question first.");
+  resetCancel();
   $("runTitle").textContent = question;
   try {
     const res = await post("/api/ask", {
       question, papers: +$("papers").value, year: +$("year").value,
     });
-    if (!res || !res.jobId) return failInto("inputError", res?.detail || "Could not start the run.");
+    if (!res || !res.jobId) {
+      // On a public instance live runs are off. Say so, then hand the visitor
+      // the recorded run rather than leaving them at a dead end.
+      failInto("inputError", res?.detail || "Could not start the run.");
+      const strip = $("demoStrip");
+      if (strip && !strip.hidden) strip.classList.add("nudge");
+      return;
+    }
     poller.start(res.jobId);
   } catch (e) {
     failInto("inputError", String(e));
@@ -140,7 +148,12 @@ $("papers").oninput = (e) => $("papersOut").textContent = e.target.value;
 $("year").oninput = (e) => $("yearOut").textContent = e.target.value;
 $("submitBtn").onclick = submit;
 $("question").onkeydown = (e) => { if (e.key === "Enter") submit(); };
-$("cancelBtn").onclick = () => { poller.stop(); showPhase("input"); };
+function resetCancel() {
+  const b = $("cancelBtn");
+  b.textContent = "RUN IN BACKGROUND";
+  b.onclick = () => { poller.stop(); showPhase("input"); };
+}
+resetCancel();
 
 for (const b of document.querySelectorAll("#phaseTabs button")) {
   // Tabs navigate between phases that already exist; they never fabricate one.
@@ -150,5 +163,13 @@ for (const b of document.querySelectorAll("#phaseTabs button")) {
     showPhase(b.dataset.phase);
   };
 }
+
+mountDemos({
+  kind: "answer",
+  onPlay: (name, title) => openDemo(name, title, (r) => {
+    $("resultBody").innerHTML = answerHTML(r);
+    wireResult();
+  }),
+});
 
 showPhase("input");

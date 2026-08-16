@@ -115,6 +115,76 @@ function markReplay(replay) {
   document.body.appendChild(chip);
 }
 
+/* Recorded runs, offered in the interface.
+ *
+ * The public instance turns live submission off, and for a while the only way
+ * to reach a replay was a URL parameter — so a visitor typed a question, got
+ * an explanation of why it would not run, and had nowhere to go. An
+ * explanation is not a demo. These are the runs, playable, on the page. */
+function mountDemos({ kind, onPlay }) {
+  const host = $("demoStrip");
+  if (!host) return;
+  fetch("/api/demo").then(r => r.json()).then(list => {
+    const mine = (list || []).filter(d => d.kind === kind);
+    if (!mine.length) return;
+    host.innerHTML =
+      `<span class="lead">Recorded runs — play one</span>` +
+      mine.map(d => `<button type="button" data-demo="${esc(d.name)}"
+        data-label="${esc(d.label || d.name)}" data-elapsed="${d.elapsed || 60}">
+        <span class="play">▸</span>${esc(d.label || d.name)}
+        <span class="meta">${Math.round(d.elapsed || 0)}s · ${esc((d.recordedAt || "").slice(0, 10))}</span>
+      </button>`).join("");
+    host.hidden = false;
+    for (const b of host.querySelectorAll("button")) {
+      b.onclick = () => onPlay(b.dataset.demo, b.dataset.label);
+    }
+  }).catch(() => {});
+}
+
+/* Open a recorded run.
+ *
+ * Not a playback. The visitor gets the finished result page — scrollable,
+ * with the disclosures and evidence list live — and explores it at their own
+ * pace. A brief loading beat shows the stages the run actually went through,
+ * because those are part of what the tool does, and SHOW RESULT skips even
+ * that. Nobody is made to watch a progress bar they cannot control.
+ */
+const LOADING_BEAT = 1600;
+
+function openDemo(name, title, render) {
+  if (title) $("runTitle").textContent = title;
+
+  return fetch(`/api/demo/${name}/result`).then(r => r.json()).then(d => {
+    markReplay(d.replay || {});
+
+    const show = () => {
+      render(d.result);
+      showPhase("result");
+    };
+
+    // Stage list, filled in at once — it is a summary of the run, not a timer.
+    $("stageList").innerHTML = (d.stages || []).map(s =>
+      `<div class="row"><span class="mark">✓</span>${esc(s.label)}
+       <span class="rule"></span>
+       <span class="at">${String(Math.round(s.at)).padStart(2, "0")}s</span></div>`).join("");
+    if (d.warning) {
+      $("runWarningText").textContent = d.warning;
+      $("runWarning").hidden = false;
+    }
+    const el = Math.round(d.replay?.originalElapsed || 0);
+    if ($("runClock")) $("runClock").textContent = `RECORDED RUN — ${el}S`;
+    $("sphereFill").style.height = "92%";
+    $("spherePct").textContent = "100%";
+
+    const btn = $("cancelBtn");
+    if (btn) { btn.textContent = "SHOW RESULT"; btn.onclick = show; }
+
+    showPhase("running");
+    setTimeout(show, LOADING_BEAT);
+    return d;
+  });
+}
+
 function failInto(id, message) {
   const el = $(id);
   el.textContent = message;
