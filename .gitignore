@@ -16,6 +16,8 @@ venv/
 data/cache/
 data/fulltext/
 data/pdf/
+# Papers people upload through the web UI. Never ours to commit.
+data/uploads/
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
