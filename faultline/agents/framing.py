@@ -92,7 +92,24 @@ punctuation) aimed at PRIMARY studies reporting new empirical results. \
 Relevance ranking surfaces reviews and meta-analyses first, which is backwards \
 for this purpose - so include study-design terms and specific intervention or \
 outcome vocabulary that primary reports use and reviews do not. Use the field's \
-terminology variants so retrieval does not miss work filed under another name."""
+terminology variants so retrieval does not miss work filed under another name.
+
+INCLUSION CRITERIA MUST BE BROAD. This is the opposite of how a human \
+systematic review is written, and the reason is specific: the purpose here is \
+to find where the literature DISAGREES WITH ITSELF. Narrow criteria \
+manufacture consensus, because the studies that would have contradicted each \
+other get excluded before anyone compares them.
+
+So include studies that vary in population, dose or intensity, setting, \
+follow-up length, and outcome variant, as long as they bear on the same \
+underlying question. Those variations are not noise to be filtered out - they \
+are the candidate EXPLANATIONS for why findings conflict, and removing them \
+destroys the analysis.
+
+Reserve exclusion for studies that are genuinely about a different question, a \
+different intervention, or report no empirical result at all. Do not exclude on \
+study quality, sample size, recency, or because a finding looks implausible - \
+a null or unexpected result is exactly what conflict analysis needs."""
 
 
 def calibrate_field(router: Router, question: str, field_hint: str | None = None) -> dict:

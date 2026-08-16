@@ -64,9 +64,28 @@ Extract ONLY findings this paper itself reports or explicitly attributes. Do \
 not infer, do not generalise, do not add what you know from elsewhere.
 
 For every claim capture:
-- direction: positive / negative / null / mixed / not_stated. "null" means the \
-study found no effect - that is a real finding, not a missing one, and null \
-results are exactly what conflict analysis needs.
+
+- direction. Read this carefully, because the obvious reading is wrong:
+    "positive"  - the intervention HELPED. A real effect in the beneficial
+                  direction, statistically supported.
+    "negative"  - the intervention HARMED. A real effect in the opposite
+                  direction, statistically supported.
+    "null"      - NO effect was demonstrated either way.
+    "mixed"     - helped on one outcome or subgroup, not on another.
+
+  "negative" does NOT mean "a negative finding" or "found no benefit". Those
+  are "null". This distinction decides whether two studies genuinely conflict,
+  and getting it wrong invents contradictions between studies that in fact
+  agree.
+
+  The arithmetic test overrides any wording: if the confidence interval
+  crosses the no-effect value (1.0 for a ratio, 0 for a difference), or the
+  result is described as non-significant, the direction is "null" - however
+  the point estimate reads. A hazard ratio of 1.01 with CI 0.93 to 1.10 is
+  null, not negative. A rate ratio of 0.52 with CI 0.31 to 0.89 is positive.
+
+  A null result is a real finding, not a missing one, and null results are
+  exactly what conflict analysis needs.
 - magnitude and uncertainty: verbatim numbers where given. If absent, write \
 "not reported". NEVER invent or approximate a figure.
 - population, design, sample_size, outcome_measure, timepoint: as stated.
