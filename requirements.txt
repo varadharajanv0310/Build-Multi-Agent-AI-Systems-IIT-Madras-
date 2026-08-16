@@ -1,7 +1,12 @@
 httpx>=0.27
 pydantic>=2.7
+
+# Web UI
+fastapi>=0.116
+uvicorn>=0.36
+python-multipart>=0.0.20   # required for paper uploads (UploadFile)
+
 python-dotenv>=1.0
 tenacity>=8.3
 langgraph>=0.2
-streamlit>=1.40
 pypdf>=5.0
