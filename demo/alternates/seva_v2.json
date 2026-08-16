@@ -1,0 +1,293 @@
+{
+  "name": "seva_v2",
+  "kind": "review",
+  "label": "SEVA — IEEE TDSC submission",
+  "subject": "SEVA_tdsc.pdf",
+  "recordedAt": "2026-08-16T19:27:37+00:00",
+  "runId": "run_fac1ab34524c",
+  "elapsed": 159.95,
+  "stages": [
+    {
+      "label": "Loading your paper…",
+      "at": 0.0
+    },
+    {
+      "label": "Reading your claims…",
+      "at": 0.71
+    },
+    {
+      "label": "Found 9 claims in your paper",
+      "at": 50.29
+    },
+    {
+      "label": "Calibrating the field…",
+      "at": 50.29
+    },
+    {
+      "label": "Field: Adversarial Machine Learning – Data Poisoning Detection for Retrieval‑Augmented Generation",
+      "at": 50.29
+    },
+    {
+      "label": "Building the search strategy…",
+      "at": 50.29
+    },
+    {
+      "label": "Searching (5 queries)…",
+      "at": 50.29
+    },
+    {
+      "label": "Found 35 papers → 29 unique (via arxiv, crossref, europepmc, openalex)",
+      "at": 71.58
+    },
+    {
+      "label": "Screening 29 papers…",
+      "at": 71.58
+    },
+    {
+      "label": "4 relevant, 0 borderline",
+      "at": 84.59
+    },
+    {
+      "label": "Extracting findings from 4 papers…",
+      "at": 84.59
+    },
+    {
+      "label": "Extracted 21 findings (16 usable)",
+      "at": 105.8
+    },
+    {
+      "label": "Convening the reviewer panel (3 lineages)…",
+      "at": 105.8
+    },
+    {
+      "label": "9 objections raised",
+      "at": 156.71
+    },
+    {
+      "label": "Appraising the evidence base…",
+      "at": 156.71
+    },
+    {
+      "label": "Positioning your contribution…",
+      "at": 158.84
+    }
+  ],
+  "warning": "",
+  "result": {
+    "kind": "review",
+    "paper": {
+      "title": "SEVA: Lightweight, LLM-Free Detection of Templated Corpus Poisoning in Retrieval-Augmented Generation",
+      "meta": "READ FROM YOUR DOCUMENT · 10,867 WORDS"
+    },
+    "counts": [
+      {
+        "n": 9,
+        "label": "YOUR CLAIMS FOUND",
+        "accent": false
+      },
+      {
+        "n": 16,
+        "label": "LITERATURE FINDINGS",
+        "accent": false
+      },
+      {
+        "n": 0,
+        "label": "FATAL OBJECTIONS",
+        "accent": false
+      },
+      {
+        "n": 7,
+        "label": "MAJOR OBJECTIONS",
+        "accent": false
+      }
+    ],
+    "fatalAlert": "",
+    "novelty": {
+      "verdict": "DEFENSIBLE",
+      "placement": "SEVA contributes to the field of Retrieval-Augmented Generation (RAG) security, specifically in detecting templated corpus poisoning attacks without relying on large language models (LLMs).",
+      "draftSentence": "Unlike prior work, we present a fully local, LLM-free detector that effectively identifies templated multi-passage poisoning attacks in RAG systems.",
+      "dismissalRisk": "The prior work that SEVA is most likely to be dismissed as a special case of is PoisonedRAG, but SEVA's ability to detect templated poisoning without relying on LLMs and its effectiveness across different embedding models and hardware setups prevents this.",
+      "mustCite": [
+        {
+          "title": "PoisonedRAG",
+          "why": ""
+        },
+        {
+          "title": "RAGDefender",
+          "why": ""
+        },
+        {
+          "title": "ZKIP",
+          "why": ""
+        },
+        {
+          "title": "CleanBase",
+          "why": ""
+        }
+      ]
+    },
+    "panel": [
+      {
+        "name": "Framing",
+        "lineage": "llama",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "The paper assumes that the templated multi-passage attack is the dominant attack pattern without providing sufficient evidence to support this claim.",
+            "fix": "Provide more comprehensive analysis of existing attack patterns and their prevalence to justify the focus on templated multi-passage attacks."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The evaluation of SEVA is limited to a specific set of benchmarks and datasets, which may not be representative of all possible scenarios, and the paper does not discuss the potential limitations and biases of these benchmarks.",
+            "fix": "Include a more diverse set of benchmarks and datasets in the evaluation, and provide a thorough discussion of the potential limitations and biases of the chosen benchmarks."
+          },
+          {
+            "severity": "MINOR",
+            "text": "The paper does not provide a clear explanation of how the geometric signal used in SEVA is calculated and how it is used to detect templated multi-passage attacks.",
+            "fix": "Add a clear and concise explanation of the geometric signal calculation and its role in detecting templated multi-passage attacks."
+          }
+        ]
+      },
+      {
+        "name": "Method",
+        "lineage": "qwen",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "The paper's claims are not fully supported by the retrieved literature, and some appear to contradict or lack sufficient empirical backing.",
+            "fix": "Conduct additional experiments to validate the claims against the retrieved literature, particularly for claims that contradict known findings (e.g., claims about the effectiveness of SEVA, the failure of lexical deduplication, and the encoder-invariance of the signal)."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The paper's claims about SEVA's performance (e.g., 0% poison evasion, 82–98% attack detection) are not directly supported by the retrieved literature, which includes both positive and negative findings about similar systems.",
+            "fix": "Clarify the experimental setup and compare SEVA's performance directly with the systems and metrics mentioned in the retrieved literature (e.g., ZKIP, RAG systems in closed feedback loops)."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The claim that lexical deduplication is corpus-fragile is not supported by the retrieved literature, which includes a study showing that keyword-preserving poisons leave lexical retrievers like BM25 unaffected.",
+            "fix": "Re-evaluate the methodology for testing lexical deduplication and clarify the conditions under which it fails, as the retrieved literature suggests that some deduplication methods are robust."
+          }
+        ]
+      },
+      {
+        "name": "Significance",
+        "lineage": "llama4",
+        "objections": [
+          {
+            "severity": "MAJOR",
+            "text": "The paper claims that SEVA detects templated multi-passage poisoning at 0% poison-evasion across three seeds, but the evaluation is limited to a specific set of parameters and corpora, and it is unclear how well the results generalize to other settings.",
+            "fix": "Evaluate SEVA on a more diverse set of corpora and attack parameters to demonstrate its robustness."
+          },
+          {
+            "severity": "MAJOR",
+            "text": "The paper identifies a vulnerability to host-anchored cloning, where an attacker mimics benign documents, and notes that no complementary geometric signal closes the gap, which suggests a significant limitation of the proposed defense.",
+            "fix": "Develop and evaluate additional detection methods that can identify host-anchored cloning attacks."
+          },
+          {
+            "severity": "MINOR",
+            "text": "The comparison with CleanBase is limited to a matched operating point, and it is unclear whether SEVA offers any significant advantages over CleanBase in other scenarios.",
+            "fix": "Provide a more comprehensive comparison with CleanBase across different operating points and scenarios."
+          }
+        ]
+      }
+    ],
+    "base": {
+      "quality": "MODERATE",
+      "assessment": "The field of corpus‑poisoning detection for RAG has a growing but still limited empirical foundation. Several papers document the feasibility and severity of attacks (e.g., PoisonedRAG) and propose defenses (e.g., ZKIP, RobustRAG), yet most studies evaluate a single model or dataset, lack independent replication, and focus on narrowly defined attack families. The evidence therefore supports the plausibility of the problem and the potential of geometric or retrieval‑based defenses, but it remains insufficiently diversified to be deemed strong.",
+      "systemic": [
+        {
+          "text": "publication bias"
+        },
+        {
+          "text": "small-sample norms"
+        },
+        {
+          "text": "missing null results"
+        },
+        {
+          "text": "benchmark overfitting"
+        },
+        {
+          "text": "absent replication"
+        },
+        {
+          "text": "unfalsifiable framing"
+        }
+      ],
+      "construct": "The predominant construct—attack success rate measured by the proportion of corrupted targets—captures only one dimension of security risk and may not reflect real‑world impact. Likewise, the field's reliance on mutual‑similarity metrics (e.g., cluster coherence) assumes a specific poison pattern and may miss more subtle or diversified attacks, limiting the validity of the measures as comprehensive indicators of corpus safety."
+    },
+    "claims": [
+      {
+        "n": "01",
+        "text": "SEVA drives templated poison-evasion to 0% across three seeds—a 95% Wilson upper bound of 0.0154% from 25,000 templated encounters at the frozen gate—at a 0.58% document-level false-positive rate, under frozen non-oracle calibration and 1–10% contamination density.",
+        "direction": "positive",
+        "population": "in-domain",
+        "scope": "three seeds, frozen non-oracle calibration, 1–10% contamination density"
+      },
+      {
+        "n": "02",
+        "text": "On PoisonedRAG’s own released poison for the field’s general-domain benchmarks (Natural Questions, HotpotQA), and a faithful black-box build on the in-domain Security corpus, it catches the attack at 82–98%.",
+        "direction": "positive",
+        "population": "general-domain benchmarks (Natural Questions, HotpotQA) and in-domain Security corpus",
+        "scope": "PoisonedRAG’s own released poison, faithful black-box build"
+      },
+      {
+        "n": "03",
+        "text": "The lexical duplicate filtering PoisonedRAG itself found insufficient proves corpus-fragile at matched false-positive rate.",
+        "direction": "negative",
+        "population": "duplicate-dense corpora",
+        "scope": "matched false-positive rate"
+      },
+      {
+        "n": "04",
+        "text": "The gate prevents all the corruption it detects: the templated attack corrupts 18% of targets undefended and 0% with the gate in the loop.",
+        "direction": "positive",
+        "population": "targets",
+        "scope": "undefended targets, gate in the loop"
+      },
+      {
+        "n": "05",
+        "text": "Host-anchored cloning—one benign host mimicked per injected passage—evades the gate on every target while staying retrievable, no complementary geometric signal we tested closes the gap, and the bypass is not expensive: it corrupts 26–28% of targets, more than the templated attack achieves undefended.",
+        "direction": "negative",
+        "population": "targets",
+        "scope": "host-anchored cloning, no complementary geometric signal"
+      },
+      {
+        "n": "06",
+        "text": "Reproducing CleanBase, the closest corpus-level peer, at a matched operating point yields the same pattern (100% templated, 0% clones), so the boundary belongs to the shared mutual-similarity assumption rather than to our statistic.",
+        "direction": "null",
+        "population": "corpus-level peer (CleanBase)",
+        "scope": "matched operating point"
+      },
+      {
+        "n": "07",
+        "text": "The signal is encoder-invariant—templated-poison detection generalizes across three embedding models of independent lineages, bge (BAAI), e5 (Microsoft), and gte (Alibaba)—and reproducible to within 5 × 10−7 across two accelerator backends (CUDA and Apple Silicon) on a byte-identical, hash-verified corpus, several cells bit-identical.",
+        "direction": "positive",
+        "population": "embedding models (bge, e5, gte)",
+        "scope": "byte-identical, hash-verified corpus, two accelerator backends"
+      },
+      {
+        "n": "08",
+        "text": "Detection stays flat to a million documents (sub-millisecond retrieval-plus-gate cost at 10× the primary corpus, the O(log N ) claim measured, not extrapolated), and SEVA runs in 13–38 ms per query with no LLM, API, or pre-registration;",
+        "direction": "positive",
+        "population": "documents",
+        "scope": "a million documents, no LLM, API, or pre-registration"
+      },
+      {
+        "n": "09",
+        "text": "In a reproduced, shared-corpus, matched-FPR head-to-head it catches 100% of templated poison to the per-query state of the art’s ∼89%, which that baseline fails at matched false-positive rate.",
+        "direction": "positive",
+        "population": "shared-corpus, matched-FPR",
+        "scope": "reproduced, shared-corpus, matched-FPR"
+      }
+    ],
+    "run": {
+      "modelCalls": 32,
+      "localShare": 0.6875,
+      "cost": "$0.00"
+    },
+    "degraded": "",
+    "error": "",
+    "runId": "run_fac1ab34524c"
+  }
+}
